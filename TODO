@@ -15,13 +15,13 @@ Questions
 | -- main/ (For patching)
 | -- submission_diffs/
 | -- project/
-      | -- src (Patched version. To be compiled)
-      |     | -- main
+      | -- src 
+      |     | -- main (Patched version. To be compiled)
       |     | -- test
       |
       | -- pom.xml
       | -- target
-             | -- test-classes
+             | -- test-classes (Maybe Compiled once during first successful test and then maintained between test runs)
              | -- classes (SECTION THATS SWAPPED OUT)
 
 __Planned Features__

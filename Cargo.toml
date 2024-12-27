@@ -6,7 +6,9 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+tempfile = "3.14.0"
+zip = "2.2.2"
 
 [[bin]]
 name = "darwin_cli"
-path = "main.rs"
+path = "src/main.rs"
