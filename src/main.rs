@@ -1,5 +1,6 @@
+use std::collections::HashSet;
 use std::fs::{self, File};
-use std::io::{copy, prelude::*, SeekFrom};
+use std::io::{copy, prelude::*};
 use std::io::{self, BufRead, BufWriter};
 use std::path::Path;
 use std::process::{exit, Stdio};
@@ -55,21 +56,27 @@ fn init_darwin(skeleton_path: &Path, submission_zipfile_path: &Path) -> Result<(
         skeleton_path.join("pom.xml"),
         project_path.join("project").join("pom.xml"),
     )?;
+
+    let mut file_ignore_set = HashSet::new();
+    file_ignore_set.insert(".DS_Store");
+
     util::utils::copy_dir_all(
         skeleton_path.join("src").join("main"),
         project_path.join("main"),
+        &file_ignore_set
     )?;
     util::utils::copy_dir_all(
         skeleton_path.join("src").join("test"),
         project_path.join("project").join("src").join("test"),
+        &file_ignore_set
     )?;
 
-    submission_to_diffs(project_path, submission_zipfile_path)?;
+    submission_to_diffs(project_path, submission_zipfile_path, &file_ignore_set)?;
 
     Ok(())
 }
 
-fn submission_to_diffs(project_path: &Path, submission_zipfile_path: &Path) -> Result<(), io::Error> {
+fn submission_to_diffs(project_path: &Path, submission_zipfile_path: &Path, file_ignore_set: &HashSet<&str>) -> Result<(), io::Error> {
     let file = File::open(submission_zipfile_path)?;
     let mut zip = ZipArchive::new(file)?;
 
@@ -92,11 +99,10 @@ fn submission_to_diffs(project_path: &Path, submission_zipfile_path: &Path) -> R
             continue;
         }
 
-        student_submission_file.seek(SeekFrom::Start(0))?;
         let mut student_project_zip = ZipArchive::new(student_submission_file)?;
 
         let src_main_dir = tempdir()?;
-        if let Err(e) = extract_student_src_main(&mut student_project_zip, &src_main_dir.path()) {
+        if let Err(e) = extract_student_src_main(&mut student_project_zip, &src_main_dir.path(), file_ignore_set) {
             println!("Error extracting {}'s src/main: {}", &student_name, e);
             continue;
         }
@@ -154,17 +160,15 @@ fn extract_student_submission(
 fn extract_student_src_main(
     student_project_zip: &mut ZipArchive<File>,
     dest_path: &Path,
+    file_ignore_set: &HashSet<&str>
 ) -> Result<(), ZipError> {
-    let first_path = { student_project_zip.file_names().next().unwrap() };
-    let project_basename = Path::new(first_path).components().next().unwrap();
-    let tmp = Path::new(project_basename.as_os_str())
-        .join("src")
-        .join("main");
+    let tmp = Path::new("src").join("main");
     let main_path = tmp.to_str().unwrap();
 
     util::utils::extract_directory_from_zip(
         student_project_zip,
         dest_path.to_str().unwrap(),
         main_path,
+        file_ignore_set
     )
 }
