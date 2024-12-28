@@ -6,20 +6,20 @@ cp skel/src/main main
 patch -d ./main -p3 < student.diff
 
 
-
-Questions
-- Do we need .project? 
-- How to compile all classes (not test classes)
+Note: The pom.xml is stored in main/. 
 
 .darwin
 | -- main/ (For patching)
+|     | -- pom.xml
+|     | -- student classes
+|
 | -- submission_diffs/
 | -- project/
       | -- src 
       |     | -- main (Patched version. To be compiled)
       |     | -- test
       |
-      | -- pom.xml
+      | -- pom.xml ()
       | -- target
              | -- test-classes (Maybe Compiled once during first successful test and then maintained between test runs)
              | -- classes (SECTION THATS SWAPPED OUT)

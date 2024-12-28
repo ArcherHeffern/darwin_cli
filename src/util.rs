@@ -3,6 +3,7 @@ pub mod utils {
 
     use std::collections::HashSet;
     use std::fs;
+    use std::path::PathBuf;
     use std::{fs::File, io, path::Path};
 
     use zip::result::ZipError;
@@ -20,6 +21,30 @@ pub mod utils {
             }
         }
         Ok(())
+    }
+
+    pub fn list_files_recursively(dir: &Path) -> Vec<PathBuf> {
+        let mut files = Vec::new();
+        if dir.is_dir() {
+            match fs::read_dir(dir) {
+                Ok(entries) => {
+                    for entry in entries {
+                        if let Ok(entry) = entry {
+                            let path = entry.path();
+                            if path.is_file() {
+                                files.push(path);
+                            } else if path.is_dir() {
+                                let mut sub_files = list_files_recursively(&path);
+                                files.append(&mut sub_files);
+                            }
+                        }
+                    }
+                },
+                Err(e) => println!("Failed to read directory {}: {}", dir.display(), e),
+            }
+        }
+
+        files
     }
 
     pub fn extract_directory_from_zip(archive: &mut ZipArchive<File>, output_dir: &str, dir_name: &str, ignore_substrings: &HashSet<&str>) -> zip::result::ZipResult<()> {

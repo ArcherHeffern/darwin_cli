@@ -1,29 +1,45 @@
 use std::collections::HashSet;
 use std::fs::{self, File};
-use std::io::{copy, prelude::*};
+use std::io::{copy, prelude::*, BufReader};
 use std::io::{self, BufRead, BufWriter};
 use std::path::Path;
 use std::process::{exit, Stdio};
 use std::process::Command;
 use tempfile::{tempdir, tempfile};
+use util::utils::{self, copy_dir_all};
 use zip::result::ZipError;
 use zip::ZipArchive;
 
 pub mod util;
 
+struct TestResult {
+    correct: i32
+}
 
 fn main() {
     let skeleton_path = Path::new("./skel");
     let submission_zipfile_path = Path::new("./243COSI-131A-1-PA1-59260.zip");
+    let project_path: &Path = Path::new(".darwin");
 
-    init_darwin(skeleton_path, submission_zipfile_path).unwrap();
+    let mut copy_ignore_set = HashSet::new();
+    copy_ignore_set.insert(".DS_Store");
+
+
+    init_darwin(project_path, skeleton_path, submission_zipfile_path, &copy_ignore_set).unwrap();
+
+    println!("Tests: {:?}", list_tests(project_path));
+
+    set_active_project(project_path, Path::new("./.darwin/submission_diffs/<student_diff"), &copy_ignore_set).unwrap();
+
+    let test = "WorkingDirectoryTests.java";
+
+    run_test(project_path, test).unwrap();
 }
 
-fn init_darwin(skeleton_path: &Path, submission_zipfile_path: &Path) -> Result<(), io::Error> {
+fn init_darwin(project_path: &Path, skeleton_path: &Path, submission_zipfile_path: &Path, copy_ignore_set: &HashSet<&str>) -> Result<(), io::Error> {
     assert!(skeleton_path.is_dir());
     assert!(submission_zipfile_path.extension().unwrap() == "zip");
 
-    let project_path: &Path = Path::new(".darwin");
     let stdin = io::stdin();
     let mut stdout = io::stdout();
     if project_path.exists() {
@@ -57,25 +73,80 @@ fn init_darwin(skeleton_path: &Path, submission_zipfile_path: &Path) -> Result<(
         project_path.join("project").join("pom.xml"),
     )?;
 
-    let mut file_ignore_set = HashSet::new();
-    file_ignore_set.insert(".DS_Store");
-
     util::utils::copy_dir_all(
         skeleton_path.join("src").join("main"),
         project_path.join("main"),
-        &file_ignore_set
+        &copy_ignore_set
     )?;
     util::utils::copy_dir_all(
         skeleton_path.join("src").join("test"),
         project_path.join("project").join("src").join("test"),
-        &file_ignore_set
+        &copy_ignore_set
     )?;
 
-    submission_to_diffs(project_path, submission_zipfile_path, &file_ignore_set)?;
+    submission_to_diffs(project_path, submission_zipfile_path, &copy_ignore_set)?;
 
     Ok(())
 }
 
+fn list_tests(project_path: &Path) -> Vec<String> {
+    let test_dir = project_path.join("project").join("src").join("test");
+    let files = utils::list_files_recursively(&test_dir);
+
+    let mut out = Vec::new();
+    for file in files {
+        out.push(String::from(file.file_name().unwrap().to_str().unwrap()));
+    }
+
+    out
+}
+
+fn set_active_project(project_path: &Path, diff_path: &Path, copy_ignore_set: &HashSet<&str>) -> Result<(), io::Error> {
+    // diff_path: Contains the full project relative path
+    // rm -rf .darwin/project/src/main
+    // cp -r .darwin/main/ .darwin/project/src/main
+    // patch -d .darwin/project/src/main -p2 < .darwin/submission_diffs/<student_diff
+    let project_main_path = project_path.join("project").join("src").join("main");
+    if project_main_path.exists() {
+        if let Err(e) = fs::remove_dir_all(&project_main_path) {
+            eprintln!("Error removing {} when setting active project: {}", project_main_path.to_str().unwrap(), e);
+            return Err(e);
+        }
+    }
+    copy_dir_all(project_path.join("main"), &project_main_path, copy_ignore_set).unwrap();
+
+    let mut output = Command::new("patch")
+        .arg("-d")
+        .arg(&project_main_path)
+        .arg("-p2")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::null())
+        .spawn()?;
+
+    match output.stdin.take() {
+        Some(stdin) => {
+            let mut stdin_writer = BufWriter::new(stdin);
+            let patch_file = File::open(diff_path)?;
+            let mut patch_reader = BufReader::new(patch_file);
+            copy(&mut patch_reader, &mut stdin_writer)?;
+        },
+        None => {
+            eprintln!("Cannot access stdin of patch process {}", output.id());
+        }
+    }
+
+    let status = output.wait()?;
+    if !status.success() {
+        eprintln!("Patch command failed with status: {}", status);
+    }
+
+    Ok(())
+}
+
+fn run_test(project_path: &Path, test: &str) -> Result<TestResult, io::Error> {
+    // Assume the student diff has already been resolved and placed into .darwin/project/src/main
+    Ok(TestResult { correct: 1 })
+}
 fn submission_to_diffs(project_path: &Path, submission_zipfile_path: &Path, file_ignore_set: &HashSet<&str>) -> Result<(), io::Error> {
     let file = File::open(submission_zipfile_path)?;
     let mut zip = ZipArchive::new(file)?;
