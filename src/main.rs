@@ -27,13 +27,13 @@ fn main() {
 
     init_darwin(project_path, skeleton_path, submission_zipfile_path, &copy_ignore_set).unwrap();
 
-    println!("Tests: {:?}", list_tests(project_path));
+    // println!("Tests: {:?}", list_tests(project_path));
 
-    set_active_project(project_path, Path::new("./.darwin/submission_diffs/<student_diff"), &copy_ignore_set).unwrap();
+    set_active_project(project_path, Path::new("./.darwin/submission_diffs/<student.diff"), &copy_ignore_set).unwrap();
 
-    let test = "WorkingDirectoryTests.java";
+    // let test = "WorkingDirectoryTests.java";
 
-    run_test(project_path, test).unwrap();
+    // run_test(project_path, test).unwrap();
 }
 
 fn init_darwin(project_path: &Path, skeleton_path: &Path, submission_zipfile_path: &Path, copy_ignore_set: &HashSet<&str>) -> Result<(), io::Error> {
@@ -70,7 +70,7 @@ fn init_darwin(project_path: &Path, skeleton_path: &Path, submission_zipfile_pat
     fs::create_dir(project_path.join("main"))?;
     fs::copy(
         skeleton_path.join("pom.xml"),
-        project_path.join("project").join("pom.xml"),
+        project_path.join("main").join("pom.xml"),
     )?;
 
     util::utils::copy_dir_all(
@@ -106,6 +106,7 @@ fn set_active_project(project_path: &Path, diff_path: &Path, copy_ignore_set: &H
     // rm -rf .darwin/project/src/main
     // cp -r .darwin/main/ .darwin/project/src/main
     // patch -d .darwin/project/src/main -p2 < .darwin/submission_diffs/<student_diff
+    // mv .darwin/project/src/main/pom.xml .darwin/project/pom
     let project_main_path = project_path.join("project").join("src").join("main");
     if project_main_path.exists() {
         if let Err(e) = fs::remove_dir_all(&project_main_path) {
@@ -139,6 +140,8 @@ fn set_active_project(project_path: &Path, diff_path: &Path, copy_ignore_set: &H
     if !status.success() {
         eprintln!("Patch command failed with status: {}", status);
     }
+
+    fs::rename(project_path.join("project").join("src").join("main").join("pom.xml"), project_path.join("project").join("pom.xml"))?;
 
     Ok(())
 }
@@ -175,6 +178,11 @@ fn submission_to_diffs(project_path: &Path, submission_zipfile_path: &Path, file
         let src_main_dir = tempdir()?;
         if let Err(e) = extract_student_src_main(&mut student_project_zip, &src_main_dir.path(), file_ignore_set) {
             println!("Error extracting {}'s src/main: {}", &student_name, e);
+            continue;
+        }
+
+        if let Err(e) = extract_student_pom(&mut student_project_zip, &src_main_dir.path()) {
+            println!("Error extracting {}'s pom.xml: {}", &student_name, e);
             continue;
         }
 
@@ -242,4 +250,35 @@ fn extract_student_src_main(
         main_path,
         file_ignore_set
     )
+}
+
+fn extract_student_pom(student_project_zip: &mut ZipArchive<File>, dest_dir: &Path) -> Result<(), ZipError> {
+    for i in 0..student_project_zip.len() {
+        let file = student_project_zip.by_index(i)?;
+
+        // Check if the file name contains 'pom.xml'
+        if file.name().contains("pom.xml") {
+            // Create a file in the destination directory to write to
+            let dest_path = dest_dir.join("pom.xml");
+            let dest_file = File::create(&dest_path)
+                .map_err(|e| ZipError::Io(io::Error::new(io::ErrorKind::Other, e)))?;
+            
+            // Set up the reader and writer
+            let mut reader = BufReader::new(file);
+            let mut writer = BufWriter::new(dest_file);
+
+            // Copy the contents of the zip entry to the new file
+            copy(&mut reader, &mut writer)
+                .map_err(|e| ZipError::Io(io::Error::new(io::ErrorKind::Other, e)))?;
+
+            // Flush the writer to ensure all data is written
+            writer.flush()
+                .map_err(|e| ZipError::Io(io::Error::new(io::ErrorKind::Other, e)))?;
+
+            // Since pom.xml was found and copied, we break out of the loop
+            break;
+        }
+    }
+
+    Ok(())
 }
