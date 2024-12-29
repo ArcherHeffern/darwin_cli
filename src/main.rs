@@ -12,6 +12,12 @@ use zip::ZipArchive;
 
 pub mod util;
 
+/*
+TODO: 
+- Find tests by full directory instead of just file name. What if there are multiple files with same basename?
+*/
+
+
 struct TestResult {
     correct: i32
 }
@@ -29,8 +35,9 @@ fn main() {
 
     // println!("Tests: {:?}", list_tests(project_path));
 
-    set_active_project(project_path, Path::new("./.darwin/submission_diffs/<student.diff"), &copy_ignore_set).unwrap();
+    set_active_project(project_path, Path::new("./.darwin/submission_diffs/student.diff"), &copy_ignore_set).unwrap();
 
+    run_test(project_path, &list_tests(project_path)[0]).unwrap();
     // let test = "WorkingDirectoryTests.java";
 
     // run_test(project_path, test).unwrap();
@@ -95,7 +102,11 @@ fn list_tests(project_path: &Path) -> Vec<String> {
 
     let mut out = Vec::new();
     for file in files {
-        out.push(String::from(file.file_name().unwrap().to_str().unwrap()));
+        let file_name = String::from(file.file_name().unwrap().to_str().unwrap());
+        if !file_name.ends_with(".java") {
+            continue;
+        }
+        out.push(file_name[..file_name.len()-5].to_string());
     }
 
     out
@@ -104,6 +115,7 @@ fn list_tests(project_path: &Path) -> Vec<String> {
 fn set_active_project(project_path: &Path, diff_path: &Path, copy_ignore_set: &HashSet<&str>) -> Result<(), io::Error> {
     // diff_path: Contains the full project relative path
     // rm -rf .darwin/project/src/main
+    // rm -rf .darwin/project/target
     // cp -r .darwin/main/ .darwin/project/src/main
     // patch -d .darwin/project/src/main -p2 < .darwin/submission_diffs/<student_diff
     // mv .darwin/project/src/main/pom.xml .darwin/project/pom
@@ -114,6 +126,12 @@ fn set_active_project(project_path: &Path, diff_path: &Path, copy_ignore_set: &H
             return Err(e);
         }
     }
+
+    let maybe_target_dir = project_path.join("project").join("target");
+    if maybe_target_dir.exists() {
+        fs::remove_dir_all(maybe_target_dir)?;
+    }
+
     copy_dir_all(project_path.join("main"), &project_main_path, copy_ignore_set).unwrap();
 
     let mut output = Command::new("patch")
@@ -148,6 +166,36 @@ fn set_active_project(project_path: &Path, diff_path: &Path, copy_ignore_set: &H
 
 fn run_test(project_path: &Path, test: &str) -> Result<TestResult, io::Error> {
     // Assume the student diff has already been resolved and placed into .darwin/project/src/main
+    // mvn compile
+    // mvn -Dtest={test_str} surefire:test
+
+    let mut compile_command = Command::new("mvn")
+        .current_dir(project_path.join("project")) 
+        .arg("test-compile")
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()?;
+
+    let status = compile_command.wait()?;
+    if !status.success() {
+        eprintln!("'mvn test-compile' failed with status: {}", status);
+    }
+
+    let mut run_tests_command = Command::new("mvn")
+        .current_dir(project_path.join("project"))
+        .arg(format!("-Dtest={}", test))
+        .arg("surefire:test")
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()?;
+
+    let status = run_tests_command.wait()?;
+    if !status.success() {
+        eprintln!("'mvn -Dtest={} surefire:test' failed with status: {}", test, status);
+    }
+
     Ok(TestResult { correct: 1 })
 }
 fn submission_to_diffs(project_path: &Path, submission_zipfile_path: &Path, file_ignore_set: &HashSet<&str>) -> Result<(), io::Error> {
