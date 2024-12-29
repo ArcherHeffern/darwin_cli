@@ -53,7 +53,26 @@ pub fn run_test(project_path: &Path, student: &str, tests: &str, copy_ignore_set
         }
     }
 }
-pub fn run_tests(tests: Vec<String>) {}
+pub fn run_tests(project_path: &Path, tests: &str, copy_ignore_set: &HashSet<&str>) {
+    if !is_valid_test_string(project_path, tests) {
+        eprintln!("Expected comma separated list of valid tests. eg: 'test1,test2,test3");
+        return;
+    }
+
+    for diff_path in project_path.join("project").join("submission_diffs").read_dir().unwrap() {
+        let diff_path = diff_path.unwrap().path();
+        println!("Processing {}", diff_path.file_name().unwrap().to_str().unwrap());
+        if let Err(e) = process_diff_tests(
+            project_path,
+            &Path::new(&diff_path),
+            tests,
+            &copy_ignore_set,
+        ) {
+            eprintln!("{}", e);
+        }
+    }
+}
+
 pub fn view_results() {}
 pub fn view_student_submission() {}
 pub fn view_result(student: String) {}

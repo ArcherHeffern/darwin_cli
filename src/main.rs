@@ -56,6 +56,8 @@ struct TestResult {
 fn main() {
     let mut copy_ignore_set = HashSet::new();
     copy_ignore_set.insert(".DS_Store");
+    copy_ignore_set.insert(".gitignore");
+
     let project_path: &Path = Path::new(".darwin");
 
     let cli = Args::parse();
@@ -95,6 +97,13 @@ fn main() {
                 tests.as_str(),
                 &copy_ignore_set,
             );
+        },
+        SubCommand::TestAll { tests } => {
+            commands::run_tests(
+                project_path,
+                tests.as_str(),
+                &copy_ignore_set,
+            )
         }
         _ => {
             todo!("Rest of commands");

@@ -135,16 +135,19 @@ pub fn is_valid_test_string(project_path: &Path, tests: &str) -> bool {
 }
 
 pub fn list_tests(project_path: &Path) -> Vec<String> {
-    let test_dir = project_path.join("project").join("src").join("test");
+    let test_dir = project_path.join("project").join("src").join("test").join("java");
+    let test_dir_str = test_dir.to_str().unwrap();
     let files = list_files_recursively(&test_dir);
 
     let mut out = Vec::new();
     for file in files {
-        let file_name = String::from(file.file_name().unwrap().to_str().unwrap());
-        if !file_name.ends_with(".java") {
+        if !file.extension().map_or(true, |ext| ext != ".java") {
             continue;
         }
-        out.push(file_name[..file_name.len() - 5].to_string());
+        let file = file.strip_prefix(test_dir_str).unwrap();
+        let file_name = file.to_string_lossy();
+        let test_name = file_name.replace('/', ".");
+        out.push(test_name[..file_name.len() - 5].to_string());
     }
 
     out
