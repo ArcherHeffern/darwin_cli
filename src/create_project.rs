@@ -1,3 +1,4 @@
+use crate::util;
 use io::prelude::*;
 use std::fs::File;
 use std::io::{self, copy, BufReader, BufWriter};
@@ -6,7 +7,6 @@ use std::{collections::HashSet, fs, path::Path, process::exit};
 use tempfile::{tempdir, tempfile};
 use zip::result::ZipError;
 use zip::ZipArchive;
-use crate::util;
 
 pub fn init_darwin(
     project_path: &Path,

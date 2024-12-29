@@ -1,6 +1,10 @@
 use std::{collections::HashSet, path::Path};
 
-use crate::{create_project, run_tests::process_diff_tests, util::{self, is_valid_test_string}};
+use crate::{
+    create_project,
+    run_tests::process_diff_tests,
+    util::{self, is_valid_test_string},
+};
 
 pub fn create_darwin(
     project_path: &Path,

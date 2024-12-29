@@ -1,9 +1,18 @@
-use std::{collections::HashSet, io, path::Path, process::{Command, Stdio}};
+use std::{
+    collections::HashSet,
+    io,
+    path::Path,
+    process::{Command, Stdio},
+};
 
 use crate::{util::set_active_project, TestResult};
 
-
-pub fn process_diff_tests(project_path: &Path, diff_path: &Path, test: &str, copy_ignore_set: &HashSet<&str>) -> Result<TestResult, io::Error> {
+pub fn process_diff_tests(
+    project_path: &Path,
+    diff_path: &Path,
+    test: &str,
+    copy_ignore_set: &HashSet<&str>,
+) -> Result<TestResult, io::Error> {
     set_active_project(project_path, diff_path, &copy_ignore_set)?;
     compile(project_path)?;
     run_test(project_path, test)?;
@@ -16,7 +25,7 @@ fn compile(project_path: &Path) -> Result<(), io::Error> {
     // mvn compile
 
     let mut compile_command = Command::new("mvn")
-        .current_dir(project_path.join("project")) 
+        .current_dir(project_path.join("project"))
         .arg("test-compile")
         .stdin(Stdio::null())
         .stdout(Stdio::null())
@@ -45,7 +54,10 @@ fn run_test(project_path: &Path, test: &str) -> Result<(), io::Error> {
 
     let status = run_tests_command.wait()?;
     if !status.success() {
-        eprintln!("'mvn -Dtest={} surefire:test' failed with status: {}", test, status);
+        eprintln!(
+            "'mvn -Dtest={} surefire:test' failed with status: {}",
+            test, status
+        );
     }
 
     Ok(())

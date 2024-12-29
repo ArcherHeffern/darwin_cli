@@ -1,4 +1,3 @@
-
 use std::collections::HashSet;
 use std::fs;
 use std::io::{copy, BufReader, BufWriter};
@@ -119,7 +118,7 @@ pub fn find_student_diff_file(project_path: &Path, student_name: &str) -> Option
     if diff_path.is_file() {
         return Some(diff_path);
     }
-    
+
     None
 }
 
@@ -133,7 +132,6 @@ pub fn is_valid_test_string(project_path: &Path, tests: &str) -> bool {
         }
     }
     return true;
-
 }
 
 pub fn list_tests(project_path: &Path) -> Vec<String> {
@@ -146,7 +144,7 @@ pub fn list_tests(project_path: &Path) -> Vec<String> {
         if !file_name.ends_with(".java") {
             continue;
         }
-        out.push(file_name[..file_name.len()-5].to_string());
+        out.push(file_name[..file_name.len() - 5].to_string());
     }
 
     out
