@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 use std::fs;
-use std::io::{copy, BufReader, BufWriter};
+use std::io::{copy, BufReader, BufWriter, prelude::*};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::{fs::File, io, path::Path};
@@ -206,4 +206,26 @@ pub fn set_active_project(
     )?;
 
     Ok(())
+}
+
+pub fn file_contains_line(file: &Path, line: &str) -> Result<bool, io::Error> {
+    let file = File::open(file)?;
+    let mut file = BufReader::new(file);
+    let mut cur_line = String::new();
+    loop {
+        cur_line.clear();
+        match file.read_line(&mut cur_line) {
+            Ok(0) => {
+                return Ok(false);
+            }
+            Ok(_) => {
+                if line == cur_line {
+                    return Ok(true);
+                }
+            }
+            Err(e) => {
+                return Err(e);
+            }
+        }
+    }
 }

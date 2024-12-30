@@ -1,7 +1,7 @@
 use std::{collections::HashSet, path::Path};
 
 use crate::{
-    create_project, list_students, run_tests::process_diff_tests, util::{self, is_valid_test_string}
+    create_project, list_students, run_tests::process_diff_tests, util::{self, is_valid_test_string}, view_student_results, TestResult
 };
 
 pub fn create_darwin(
@@ -82,5 +82,12 @@ pub fn run_tests(project_path: &Path, tests: &str, copy_ignore_set: &HashSet<&st
 
 pub fn view_results() {}
 pub fn view_student_submission() {}
-pub fn view_result(student: String) {}
+pub fn view_student_result(project_path: &Path, student: &str, test: &str) {
+     if !list_students::list_students(project_path).contains(student) {
+        eprintln!("Student '{}' not recognized", student);
+        return;
+     }
+
+     println!("{:?}", view_student_results::parse_test_results(project_path, student, test));
+}
 pub fn download_results() {}

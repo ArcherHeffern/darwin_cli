@@ -76,16 +76,10 @@ fn relocate_test_results(project_path: &Path, student: &str, tests: &str) -> Res
     for test in tests.split(',') {
         let results_filename_from = format!("TEST-{}.xml", test);
         let results_file_from = project_path.join("project").join("target").join("surefire-reports").join(results_filename_from);
-        let results_filename_to = format!("{}{}", student, test);
+        let results_filename_to = format!("{}_{}", student, test);
         let results_file_to = project_path.join("results").join(results_filename_to);
         rename(results_file_from, results_file_to).unwrap();
 
     }
     Ok(())
-}
-
-fn parse_test_results(project_path: &Path, student: &str, test: &str) -> Result<TestResult, io::Error> {
-    let test_results_file_name = format!("{}{}", student, test);
-    let test_results_file = File::open(test_results_file_name);
-    Ok(TestResult { correct: 1 })
 }

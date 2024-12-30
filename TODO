@@ -17,7 +17,7 @@ Note: The pom.xml is stored in main/.
 |     | -- ${student_name}
 |
 | -- results/
-|     | -- ${student_name}{test name}
+|     | -- ${student_name}_{test name}
 |     | -- compile_errors
 |
 | -- project/

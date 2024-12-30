@@ -1,5 +1,6 @@
 use camino::Utf8PathBuf;
 use clap::{Parser, Subcommand};
+use std::collections::HashMap;
 use std::path::Path;
 use std::{collections::HashSet, fs};
 
@@ -9,6 +10,7 @@ mod run_tests;
 mod list_students;
 mod list_tests;
 mod util;
+mod view_student_results;
 
 /*
 TODO:
@@ -46,16 +48,28 @@ enum SubCommand {
     TestAll {
         tests: String,
     },
-    ViewResult {
+    ViewStudentResult {
         student: String,
+        test: String,
     },
-    ViewResults,
+    ViewAllStudentsResults,
     DownloadResults,
 }
 
 #[derive(Debug)]
+enum TestOk {
+    CompileError,
+    NoCompileError {
+        correct: i32,
+        errors: HashMap<i32, String>,
+        failures: HashMap<i32, String>,
+    }
+}
+#[derive(Debug)]
 struct TestResult {
-    correct: i32,
+    student: String,
+    test: String,
+    s: TestOk,
 }
 
 fn main() {
@@ -109,6 +123,9 @@ fn main() {
                 tests.as_str(),
                 &copy_ignore_set,
             )
+        }
+        SubCommand::ViewStudentResult { student, test } => {
+            commands::view_student_result(project_path, &student, &test);
         }
         _ => {
             todo!("Rest of commands");
