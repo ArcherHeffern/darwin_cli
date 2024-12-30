@@ -1,23 +1,31 @@
 use std::{
-    collections::HashSet,
-    io,
-    path::Path,
-    process::{Command, Stdio},
+    collections::HashSet, fs::{rename, File, OpenOptions}, io::{self, prelude::*}, path::Path, process::{Command, Stdio}
 };
 
 use crate::{util::set_active_project, TestResult};
 
+// Run test
+// Parse test results
 pub fn process_diff_tests(
     project_path: &Path,
+    student: &str,
     diff_path: &Path,
-    test: &str,
+    tests: &str,
     copy_ignore_set: &HashSet<&str>,
-) -> Result<TestResult, io::Error> {
+) -> Result<(), io::Error> {
+    // Assumes valid inputs
     set_active_project(project_path, diff_path, &copy_ignore_set)?;
-    compile(project_path)?;
-    run_test(project_path, test)?;
+    if let Err(e) = compile(project_path) {
+        let compile_error_path = project_path.join("results").join("compile_errors");
+        let mut compile_error_file = OpenOptions::new().read(true).append(true).open(compile_error_path).unwrap();
 
-    parse_test_results(project_path)
+        compile_error_file.write(format!("{}\n", student).as_bytes())?;
+        return Err(e);
+    }
+    run_test(project_path, tests)?;
+    relocate_test_results(project_path, student, tests)?;
+
+    return Ok(())
 }
 
 fn compile(project_path: &Path) -> Result<(), io::Error> {
@@ -34,7 +42,7 @@ fn compile(project_path: &Path) -> Result<(), io::Error> {
 
     let status = compile_command.wait()?;
     if !status.success() {
-        eprintln!("'mvn test-compile' failed with status: {}", status);
+        return Err(std::io::Error::new(std::io::ErrorKind::Other, "'mvn test-compile' failed"));
     }
 
     Ok(())
@@ -52,17 +60,32 @@ fn run_test(project_path: &Path, test: &str) -> Result<(), io::Error> {
         .stderr(Stdio::null())
         .spawn()?;
 
-    let status = run_tests_command.wait()?;
-    if !status.success() {
-        eprintln!(
-            "'mvn -Dtest={} surefire:test' failed with status: {}",
-            test, status
-        );
-    }
+    run_tests_command.wait()?;
+    // let status = run_tests_command.wait()?;
+    // if !status.success() {
+    //     eprintln!(
+    //         "'mvn -Dtest={} surefire:test' failed with status: {}",
+    //         test, status
+    //     );
+    // }
 
     Ok(())
 }
 
-fn parse_test_results(project_path: &Path) -> Result<TestResult, io::Error> {
-    Ok(TestResult { correct: 0 })
+fn relocate_test_results(project_path: &Path, student: &str, tests: &str) -> Result<(), io::Error> {
+    for test in tests.split(',') {
+        let results_filename_from = format!("TEST-{}.xml", test);
+        let results_file_from = project_path.join("project").join("target").join("surefire-reports").join(results_filename_from);
+        let results_filename_to = format!("{}{}", student, test);
+        let results_file_to = project_path.join("results").join(results_filename_to);
+        rename(results_file_from, results_file_to).unwrap();
+
+    }
+    Ok(())
+}
+
+fn parse_test_results(project_path: &Path, student: &str, test: &str) -> Result<TestResult, io::Error> {
+    let test_results_file_name = format!("{}{}", student, test);
+    let test_results_file = File::open(test_results_file_name);
+    Ok(TestResult { correct: 1 })
 }

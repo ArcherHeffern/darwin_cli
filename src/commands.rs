@@ -1,9 +1,7 @@
 use std::{collections::HashSet, path::Path};
 
 use crate::{
-    create_project,
-    run_tests::process_diff_tests,
-    util::{self, is_valid_test_string},
+    create_project, list_students, run_tests::process_diff_tests, util::{self, is_valid_test_string}
 };
 
 pub fn create_darwin(
@@ -21,26 +19,33 @@ pub fn create_darwin(
     .unwrap();
 }
 pub fn list_students(project_path: &Path) {
-    for entry in project_path.join("submission_diffs").read_dir().unwrap() {
-        println!("{:?}", entry.unwrap().file_name());
+    for student in list_students::list_students(project_path) {
+        println!("{}", student);
     }
 }
 
 pub fn list_tests(project_path: &Path) {
-    for test in util::list_tests(project_path) {
+    for test in crate::list_tests::list_tests(project_path) {
         println!("{}", test);
     }
 }
-pub fn run_test(project_path: &Path, student: &str, tests: &str, copy_ignore_set: &HashSet<&str>) {
+
+pub fn run_tests_for_student(project_path: &Path, student: &str, tests: &str, copy_ignore_set: &HashSet<&str>) {
     if !is_valid_test_string(project_path, tests) {
         eprintln!("Expected comma separated list of valid tests. eg: 'test1,test2,test3");
         return;
     }
+    if !list_students::list_students(project_path).contains(student) {
+        eprintln!("Student {} was not found", student);
+        return;
+    }
+
     match util::find_student_diff_file(project_path, student).take() {
         Some(diff_path) => {
             // Ensure tests are valid tests
             if let Err(e) = process_diff_tests(
                 project_path,
+                student,
                 &Path::new(&diff_path),
                 tests,
                 &copy_ignore_set,
@@ -53,17 +58,19 @@ pub fn run_test(project_path: &Path, student: &str, tests: &str, copy_ignore_set
         }
     }
 }
+
 pub fn run_tests(project_path: &Path, tests: &str, copy_ignore_set: &HashSet<&str>) {
     if !is_valid_test_string(project_path, tests) {
         eprintln!("Expected comma separated list of valid tests. eg: 'test1,test2,test3");
         return;
     }
 
-    for diff_path in project_path.join("project").join("submission_diffs").read_dir().unwrap() {
+    for diff_path in project_path.join("submission_diffs").read_dir().unwrap() {
         let diff_path = diff_path.unwrap().path();
         println!("Processing {}", diff_path.file_name().unwrap().to_str().unwrap());
         if let Err(e) = process_diff_tests(
             project_path,
+            diff_path.file_name().unwrap().to_str().unwrap(),
             &Path::new(&diff_path),
             tests,
             &copy_ignore_set,

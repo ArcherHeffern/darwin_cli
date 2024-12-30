@@ -6,12 +6,17 @@ use std::{collections::HashSet, fs};
 mod commands;
 mod create_project;
 mod run_tests;
+mod list_students;
+mod list_tests;
 mod util;
 
 /*
 TODO:
 - Find tests by full directory instead of just file name. What if there are multiple files with same basename?
+- TODO: If student adds a file, diff does not pick it up. 
 - Validate create-project input is dir and zipfile
+- TODO: Remove all files and directories from project that do not belong
+- TODO: Make parallelizable, project/ 
 */
 
 #[derive(Parser, Debug)]
@@ -91,7 +96,7 @@ fn main() {
             commands::list_students(project_path);
         }
         SubCommand::TestStudent { student, tests } => {
-            commands::run_test(
+            commands::run_tests_for_student(
                 project_path,
                 student.as_str(),
                 tests.as_str(),

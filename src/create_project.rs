@@ -45,6 +45,8 @@ pub fn init_darwin(
     fs::create_dir(project_path.join("project").join("src"))?;
     fs::create_dir(project_path.join("submission_diffs"))?;
     fs::create_dir(project_path.join("main"))?;
+    fs::create_dir(project_path.join("results"))?;
+    File::create(project_path.join("results").join("compile_errors"))?;
     fs::copy(
         skeleton_path.join("pom.xml"),
         project_path.join("main").join("pom.xml"),
@@ -113,7 +115,7 @@ fn submission_to_diffs(
         }
 
         let mut output = Command::new("diff")
-            .arg("-ru")
+            .arg("-ruN")
             .arg(project_path.join("main").to_str().unwrap())
             .arg(src_main_dir.path())
             .stdout(Stdio::piped())

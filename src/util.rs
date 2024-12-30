@@ -8,6 +8,8 @@ use std::{fs::File, io, path::Path};
 use zip::result::ZipError;
 use zip::ZipArchive;
 
+use crate::list_tests;
+
 pub fn copy_dir_all(
     src: impl AsRef<Path>,
     dst: impl AsRef<Path>,
@@ -124,7 +126,7 @@ pub fn find_student_diff_file(project_path: &Path, student_name: &str) -> Option
 
 pub fn is_valid_test_string(project_path: &Path, tests: &str) -> bool {
     // validate list of tests is comma separated and all exist
-    let actual_tests = list_tests(project_path);
+    let actual_tests = list_tests::list_tests(project_path);
 
     for test in tests.split(',') {
         if !actual_tests.contains(&test.to_string()) {
@@ -132,25 +134,6 @@ pub fn is_valid_test_string(project_path: &Path, tests: &str) -> bool {
         }
     }
     return true;
-}
-
-pub fn list_tests(project_path: &Path) -> Vec<String> {
-    let test_dir = project_path.join("project").join("src").join("test").join("java");
-    let test_dir_str = test_dir.to_str().unwrap();
-    let files = list_files_recursively(&test_dir);
-
-    let mut out = Vec::new();
-    for file in files {
-        if !file.extension().map_or(true, |ext| ext != ".java") {
-            continue;
-        }
-        let file = file.strip_prefix(test_dir_str).unwrap();
-        let file_name = file.to_string_lossy();
-        let test_name = file_name.replace('/', ".");
-        out.push(test_name[..file_name.len() - 5].to_string());
-    }
-
-    out
 }
 
 pub fn set_active_project(
