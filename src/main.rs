@@ -19,6 +19,7 @@ TODO:
 - Validate create-project input is dir and zipfile
 - TODO: Remove all files and directories from project that do not belong
 - TODO: Make parallelizable, project/ 
+- Locate anomolies: Very large diff, long runnings tests, 
 */
 
 #[derive(Parser, Debug)]

@@ -1,57 +1,6 @@
-Diffing
-- Create diff of only the src folder
-diff -ru skel/src/main project/src/main > student.diff
-- Patch to create entire project!
-cp skel/src/main main
-patch -d ./main -p3 < student.diff
-
-
-Note: The pom.xml is stored in main/. 
-
-.darwin
-| -- main/ (For patching)
-|     | -- pom.xml
-|     | -- $(student classes eg. java/cs131/sequentialcommandbuilder.java)
-|
-| -- submission_diffs/
-|     | -- ${student_name}
-|
-| -- results/
-|     | -- ${student_name}_{test name}
-|     | -- compile_errors
-|
-| -- project/
-      | -- src 
-      |     | -- main (Patched version. To be compiled)
-      |     | -- test
-      |
-      | -- pom.xml (Patched version)
-      | -- target
-             | -- test-classes (Maybe Compiled once during first successful test and then maintained between test runs)
-             | -- classes (SECTION THATS SWAPPED OUT)
-
 __Planned Features__
 Create project
 List tests
 Run tests (Optionally with range)
 Check for plagirism
 Show GUI
-
-mvn test-compile
-mvn -Dtest=AllSequentialTests surefire:test
-
-__Setup Project__: (skeleton, submissions)
-Create .darwin/
-Create project/
-Copy skeleton/src/main into ./main for patching
-Copy skeleton/src/test into ./project/src/test
-Compile ./project/src/test into project/target/test-classes
-Create all submission diffs at submission_diffs
-Copy skeleton/pom.xml into ./project/pom.xml
-
-__Run test__
-Delete project/target/classes/
-Copy ./main to ./project/src/main
-Patch submission_diffs/student.diff into ./project/src/main
-Compile main files and move to project/target/classes ( How to do this? )
-Run tests

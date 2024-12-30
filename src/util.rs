@@ -141,12 +141,6 @@ pub fn set_active_project(
     diff_path: &Path,
     copy_ignore_set: &HashSet<&str>,
 ) -> Result<(), io::Error> {
-    // diff_path: Contains the full project relative path
-    // rm -rf .darwin/project/src/main
-    // rm -rf .darwin/project/target
-    // cp -r .darwin/main/ .darwin/project/src/main
-    // patch -d .darwin/project/src/main -p2 < .darwin/submission_diffs/<student_diff
-    // mv .darwin/project/src/main/pom.xml .darwin/project/pom
     let project_main_path = project_path.join("project").join("src").join("main");
     if project_main_path.exists() {
         if let Err(e) = fs::remove_dir_all(&project_main_path) {
