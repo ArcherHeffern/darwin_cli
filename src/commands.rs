@@ -1,7 +1,7 @@
-use std::{collections::HashSet, path::Path};
+use std::{collections::HashSet, fs::OpenOptions, io::{stdin, BufRead}, path::Path, process::exit};
 
 use crate::{
-    create_project, list_students, list_tests, run_tests::process_diff_tests, util::{self, is_valid_test_string}, view_student_results::{self, TestResultError}
+    create_project, download_results, list_students, list_tests, run_tests::process_diff_tests, util::{self, is_valid_test_string}, view_student_results::{self, TestResultError}
 };
 
 pub fn create_darwin(
@@ -80,22 +80,24 @@ pub fn run_tests(project_path: &Path, tests: &str, copy_ignore_set: &HashSet<&st
     }
 }
 
-pub fn view_results() {}
-pub fn view_student_submission() {}
-pub fn view_student_result(project_path: &Path, student: &str, test: &str) {
-     if !list_students::list_students(project_path).iter().any(|s| s==student) {
+pub fn view_student_result(project_path: &Path, student: &str, test: &str, summarize: bool) {
+    if !list_students::list_students(project_path).iter().any(|s| s==student) {
         eprintln!("Student '{}' not recognized", student);
         return;
-     }
+    }
 
-     if !list_tests::list_tests(project_path).contains(test) {
+    if !list_tests::list_tests(project_path).contains(test) {
         eprintln!("Test '{}' not recognized", test);
         return;
-     }
+    }
 
     match view_student_results::parse_test_results(project_path, student, test) {
         Ok(result) => {
-            println!("{}", result.summarize());
+            if summarize {
+                println!("{}", result.summarize());
+            } else {
+                println!("{}", result.print());
+            }
         },
         Err(e) => {
             match e {
@@ -112,4 +114,45 @@ pub fn view_student_result(project_path: &Path, student: &str, test: &str) {
         }
     }
 }
-pub fn download_results() {}
+
+pub fn view_all_results(project_path: &Path, test: &str, summarize: bool) {
+     if !list_tests::list_tests(project_path).contains(test) {
+        eprintln!("Test '{}' not recognized", test);
+        return;
+     }
+    for student in list_students::list_students(project_path) {
+        view_student_result(project_path, student.as_str(), test, summarize);
+    }
+}
+
+pub fn download_results_summary(project_path: &Path, test: &str, outfile: &str) {
+    let out_file_path = Path::new(outfile);
+    if out_file_path.exists() {
+        println!("{} Exists. Continue? (Y/N)", outfile);
+        let mut s = String::new();
+        stdin().lock().read_line(&mut s).expect("Stdin to work");
+        s = s.to_lowercase();
+        if s != "y\n" {
+            exit(0);
+        }
+    }
+    let out_file = OpenOptions::new().write(true).truncate(true).create(true).open(out_file_path).unwrap();
+    download_results::download_results_summary(project_path, out_file, test).unwrap();
+
+}
+pub fn download_results_by_classname(project_path: &Path, test: &str, outfile: &str) {
+    let out_file_path = Path::new(outfile);
+    if out_file_path.exists() {
+        println!("{} Exists. Continue? (Y/N)", outfile);
+        let mut s = String::new();
+        stdin().lock().read_line(&mut s).expect("Stdin to work");
+        s = s.to_lowercase();
+        if s != "y\n" {
+            exit(0);
+        }
+    }
+    let out_file = OpenOptions::new().write(true).truncate(true).create(true).open(out_file_path).unwrap();
+    download_results::download_results_by_classname(project_path, out_file, test).unwrap();
+}
+
+pub fn view_student_submission() {}

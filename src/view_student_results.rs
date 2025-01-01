@@ -4,6 +4,7 @@ use xml::{name::OwnedName, attribute::OwnedAttribute, reader::XmlEvent, EventRea
 
 use crate::{util::file_contains_line, StatusMsg, TestResult, TestResults};
 
+#[derive(Debug)]
 pub enum TestResultError {
     IOError(io::Error),
     CompilationError,

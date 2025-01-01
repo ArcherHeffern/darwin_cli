@@ -213,7 +213,7 @@ pub fn file_contains_line(file: &Path, line: &str) -> Result<bool, io::Error> {
                 return Ok(false);
             }
             Ok(_) => {
-                if line == cur_line {
+                if line == &cur_line[0..cur_line.len()-1] {
                     return Ok(true);
                 }
             }

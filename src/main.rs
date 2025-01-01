@@ -1,5 +1,6 @@
 use camino::Utf8PathBuf;
 use clap::{Parser, Subcommand};
+use std::collections::HashMap;
 use std::path::Path;
 use std::time::Duration;
 use std::{collections::HashSet, fs};
@@ -11,6 +12,7 @@ mod list_students;
 mod list_tests;
 mod util;
 mod view_student_results;
+mod download_results;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -39,12 +41,28 @@ enum SubCommand {
     TestAll {
         tests: String,
     },
-    ViewStudentResult {
+    ViewStudentResultSummary {
         student: String,
         test: String,
     },
-    ViewAllStudentsResults,
-    DownloadResults,
+    ViewStudentResultByClassName {
+        student: String,
+        test: String
+    },
+    ViewAllStudentsResultsSummary {
+        test: String
+    },
+    ViewAllStudentsResultsByClassName {
+        test: String
+    },
+    DownloadResultsSummary {
+        test: String,
+        outfile: String
+    },
+    DownloadResultsByClassName {
+        test: String,
+        outfile: String
+    },
 }
 
 #[derive(Debug)]
@@ -55,11 +73,44 @@ struct TestResults {
 }
 
 impl TestResults {
-    fn summarize(&self) -> String {
+    fn summary(&self) -> (usize, usize, usize) {
+        // Correct, errored, failed
         let num_correct = self.results.iter().filter(|r|r.msg == StatusMsg::NONE).count();
-        let num_failed = self.results.iter().filter(|r|matches!(r.msg, StatusMsg::FAILURE{..})).count();
         let num_errored = self.results.iter().filter(|r|matches!(r.msg, StatusMsg::ERROR {..})).count();
-        format!("{}_{}: Correct: {}, Failed: {}, Errored: {}", self.student, self.test, num_correct, num_failed, num_errored)
+        let num_failed = self.results.iter().filter(|r|matches!(r.msg, StatusMsg::FAILURE{..})).count();
+        (num_correct, num_errored, num_failed)
+    }
+    fn summarize(&self) -> String {
+        let summary = self.summary();
+        format!("{}_{}: Correct: {}, Errored: {}, Failed: {}", self.student, self.test, summary.0, summary.1, summary.2)
+    }
+
+    fn summarize_by_classname(&self) -> HashMap<String, (i32, i32, i32)> {
+        let mut m: HashMap<String, (i32, i32, i32)> = HashMap::new();
+        for result in self.results.iter() {
+            if !m.contains_key(&result.classname) {
+                m.insert(result.classname.clone(), (0, 0, 0));
+            }
+            let index = match &result.msg {
+                StatusMsg::NONE => 0,
+                StatusMsg::ERROR { .. } => 1,
+                StatusMsg::FAILURE { .. } => 2
+            };
+            if let Some(entry) = m.get_mut(&result.classname) {
+                match index {
+                    0 => entry.0 += 1,
+                    1 => entry.1 += 1,
+                    2 => entry.2 += 1,
+                    _ => {}  // In case of an unexpected index, do nothing
+                }
+            }
+        }
+        m
+    }
+
+    fn print(&self) -> String {
+        let m = self.summarize_by_classname();
+        format!("{}_{} {:?}",self.student, self.test, m)
     }
 }
 
@@ -138,11 +189,26 @@ fn main() {
                 &copy_ignore_set,
             )
         }
-        SubCommand::ViewStudentResult { student, test } => {
-            commands::view_student_result(project_path, &student, &test);
+        SubCommand::ViewStudentResultSummary { student, test } => {
+            commands::view_student_result(project_path, &student, &test, true);
+        }
+        SubCommand::ViewStudentResultByClassName { student, test } => {
+            commands::view_student_result(project_path, &student, &test, false);
+        }
+        SubCommand::ViewAllStudentsResultsSummary { test } => {
+            commands::view_all_results(project_path, test.as_str(), true);
+        }
+        SubCommand::ViewAllStudentsResultsByClassName { test } => {
+            commands::view_all_results(project_path, test.as_str(), false);
+        }
+        SubCommand::DownloadResultsSummary { test, outfile } => {
+            commands::download_results_summary(project_path, test.as_str(), outfile.as_str());
+        }
+        SubCommand::DownloadResultsByClassName { test, outfile } => {
+            commands::download_results_by_classname(project_path, test.as_str(), outfile.as_str());
         }
         _ => {
-            todo!("Rest of commands");
+            todo!("");
         }
     }
 }
