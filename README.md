@@ -1,25 +1,23 @@
 # .darwin folder structure
-<div>
-.darwin
-| -- main/ (For patching)
-|     | -- pom.xml
-|     | -- $(student classes eg. java/cs131/sequentialcommandbuilder.java)
-|
-| -- submission_diffs/
-|     | -- ${student_name}
-|
-| -- results/
-|     | -- ${student_name}_{test name}
-|     | -- compile_errors
-|
-| -- project/
-      | -- src 
-      |     | -- main (Patched version. To be compiled)
-      |     | -- test
-      |
-      | -- pom.xml (Patched version)
-      | -- target (Not persisted between runs)
-</div>
+.darwin  
+| -- main/ (For patching)  
+|     | -- pom.xml  
+|     | -- $(student classes eg. java/cs131/sequentialcommandbuilder.java)  
+|  
+| -- submission_diffs/  
+|     | -- ${student_name}  
+|  
+| -- results/  
+|     | -- ${student_name}_{test name}  
+|     | -- compile_errors  
+|  
+| -- project/  
+      | -- src   
+      |     | -- main (Patched version. To be compiled)  
+      |     | -- test  
+      |  
+      | -- pom.xml (Patched version)  
+      | -- target (Not persisted between runs)  
 
 # Storing Diffs
 Goal: Create diff of src/main folder and the pom.xml  
