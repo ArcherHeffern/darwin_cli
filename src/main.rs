@@ -12,16 +12,6 @@ mod list_tests;
 mod util;
 mod view_student_results;
 
-/*
-TODO:
-- Find tests by full directory instead of just file name. What if there are multiple files with same basename?
-- TODO: If student adds a file, diff does not pick it up. 
-- Validate create-project input is dir and zipfile
-- TODO: Remove all files and directories from project that do not belong
-- TODO: Make parallelizable, project/ 
-- Locate anomolies: Very large diff, long runnings tests, 
-*/
-
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {

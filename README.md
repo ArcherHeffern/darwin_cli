@@ -1,4 +1,5 @@
 # .darwin folder structure
+<div>
 .darwin
 | -- main/ (For patching)
 |     | -- pom.xml
@@ -17,9 +18,8 @@
       |     | -- test
       |
       | -- pom.xml (Patched version)
-      | -- target
-             | -- test-classes (Maybe Compiled once during first successful test and then maintained between test runs)
-             | -- classes (SECTION THATS SWAPPED OUT)
+      | -- target (Not persisted between runs)
+</div>
 
 # Storing Diffs
 Goal: Create diff of src/main folder and the pom.xml  
