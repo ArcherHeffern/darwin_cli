@@ -1,5 +1,6 @@
 # .darwin folder structure
-.darwin  
+```{verbatim}
+.darwin
 | -- main/ (For patching)  
 |     | -- pom.xml  
 |     | -- $(student classes eg. java/cs131/sequentialcommandbuilder.java)  
@@ -18,12 +19,12 @@
       |  
       | -- pom.xml (Patched version)  
       | -- target (Not persisted between runs)  
-
+```
 # Storing Diffs
 Goal: Create diff of src/main folder and the pom.xml  
 To save space and simplify the project structure, we move each students pom.xml to src/main/ before creating the diff. 
 
-diff -ruN skel/src/main project/src/main > student.diff
+`diff -ruN skel/src/main project/src/main > student.diff`
 
 # Setting active project (Applying diffs)
 ``` bash
