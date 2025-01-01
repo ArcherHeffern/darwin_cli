@@ -1,6 +1,6 @@
 # Usage
-`cargo run -- ` : Shows help
-`cargo run -- create-project PROJECT_SKELETON MOODLE_SUBMISSIONS_ZIPFILE` : Initialize darwin
+`cargo run -- ` : Shows help  
+`cargo run -- create-project PROJECT_SKELETON MOODLE_SUBMISSIONS_ZIPFILE` : Initialize darwin  
 
 # Stats
 ## Memory Saving (Using PA1)
