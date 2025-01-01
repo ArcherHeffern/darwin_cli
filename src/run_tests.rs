@@ -1,5 +1,5 @@
 use std::{
-    collections::HashSet, fs::{remove_dir_all, remove_file, rename, OpenOptions}, io::{self, prelude::*, ErrorKind}, path::Path, process::{Command, Stdio}
+    fs::{remove_dir_all, remove_file, rename, OpenOptions}, io::{self, prelude::*, ErrorKind}, path::Path, process::{Command, Stdio}
 };
 
 use crate::util::{self, initialize_project, is_student, is_test, set_active_project};
@@ -12,6 +12,10 @@ pub fn run_test_for_student(darwin_path: &Path, project_path: &Path, student: &s
     }
     if !is_student(darwin_path, student) {
         return Err(io::Error::new(ErrorKind::InvalidInput, format!("Student '{}' was not found", student)));
+    }
+    let results_filename_to = format!("{}_{}", student, test);
+    if darwin_path.join("results").join(results_filename_to).is_file() {
+        return Ok(());
     }
     
     if project_path.is_dir() {
