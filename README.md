@@ -1,5 +1,5 @@
 # .darwin folder structure
-```{verbatim}
+```verbatim
 .darwin
 | -- main/ (For patching)  
 |     | -- pom.xml  
