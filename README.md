@@ -1,3 +1,18 @@
+# Usage
+`cargo run -- ` : Shows help
+`cargo run -- create-project PROJECT_SKELETON MOODLE_SUBMISSIONS_ZIPFILE` : Initialize darwin
+
+# Stats
+## Memory Saving (Using PA1)
+- All students submissions Zipped: 75M
+- All student submissions Unzipped: 308M
+- All student Diffs using autograder: 2MB
+
+__Memory reduction: 99.35%__
+
+## Grading Speed increase
+Significant. On the order of days. 
+
 # .darwin folder structure
 ```verbatim
 .darwin
