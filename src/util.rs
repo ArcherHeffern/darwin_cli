@@ -1,6 +1,7 @@
 use std::collections::HashSet;
-use std::fs;
-use std::io::{copy, BufReader, BufWriter, prelude::*};
+use std::fs::{self, create_dir, create_dir_all, remove_dir_all};
+use std::io::{copy, prelude::*, BufReader, BufWriter, Error, Result};
+use std::os::unix::fs::symlink;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::{fs::File, io, path::Path};
@@ -133,42 +134,48 @@ pub fn is_student(darwin_path: &Path, student: &str) -> bool {
     list_students::list_students(darwin_path).iter().any(|s|s==student)
 }
 
+pub fn initialize_project(darwin_path: &Path, project_path: &Path) -> Result<()> {
+    // Invariants: 
+    // - darwin_path is an existing .darwin project root directory
+    // - project_path does not exist
+    assert!( darwin_path.is_dir());
+    assert!( !project_path.exists());
+
+    create_dir_all(project_path)?;
+    create_dir(project_path.join("src"))?;
+    copy_dir_all(darwin_path.join("main"), project_path.join("src").join("main"), &HashSet::new())?;
+    symlink(darwin_path.join("test").canonicalize()?, project_path.join("src").join("test"))?;
+
+    Ok(())
+
+}
+
 pub fn set_active_project(
     darwin_path: &Path,
+    project_path: &Path,
     diff_path: &Path,
-) -> Result<(), io::Error> {
-    let project_main_path = darwin_path.join("project").join("src").join("main");
-    if project_main_path.exists() {
-        if let Err(e) = fs::remove_dir_all(&project_main_path) {
-            eprintln!(
-                "Error removing {} when setting active project: {}",
-                project_main_path.to_str().unwrap(),
-                e
-            );
-            return Err(e);
-        }
-    }
+) -> Result<()> {
+    // Invariants: 
+    // - darwin_path is an existing .darwin project root directory
+    // - project_path is an existing, newly initialized project directory
+    assert!(darwin_path.is_dir());
+    assert!(project_path.is_dir());
 
-    let maybe_target_dir = darwin_path.join("project").join("target");
-    if maybe_target_dir.exists() {
-        fs::remove_dir_all(maybe_target_dir)?;
-    }
-
+    let project_main_path = project_path.join("src").join("main");
     patch(darwin_path.join("main").as_path(), diff_path, project_main_path.as_path())?;
 
     fs::rename(
-        darwin_path
-            .join("project")
+        project_path
             .join("src")
             .join("main")
             .join("pom.xml"),
-        darwin_path.join("project").join("pom.xml"),
+        project_path.join("pom.xml"),
     )?;
 
     Ok(())
 }
 
-pub fn patch(patch_path: &Path, diff_path: &Path, dest_path: &Path) -> Result<(), io::Error> {
+pub fn patch(patch_path: &Path, diff_path: &Path, dest_path: &Path) -> Result<()> {
     // patch_path: Directory containing original files
     // diff_path: Diff to be patched into patch_path
     // Destination path
@@ -208,7 +215,7 @@ pub fn patch(patch_path: &Path, diff_path: &Path, dest_path: &Path) -> Result<()
 
 }
 
-pub fn file_contains_line(file: &Path, line: &str) -> Result<bool, io::Error> {
+pub fn file_contains_line(file: &Path, line: &str) -> Result<bool> {
     let file = File::open(file)?;
     let mut file = BufReader::new(file);
     let mut cur_line = String::new();

@@ -34,6 +34,8 @@ Significant. On the order of days.
 | -- main/ (For patching)  
 |     | -- pom.xml  
 |     | -- $(student classes eg. java/cs131/sequentialcommandbuilder.java)  
+|
+| -- test/ (For symlinking into project)
 |  
 | -- submission_diffs/  
 |     | -- ${student_name}  
@@ -44,10 +46,10 @@ Significant. On the order of days.
 |
 | -- tests_ran
 |  
-| -- project/  
+| -- project(\d+)/  
       | -- src   
       |     | -- main (Patched version. To be compiled)  
-      |     | -- test  
+      |     | -- test (Symlink to .darwin/test) 
       |  
       | -- pom.xml (Patched version)  
       | -- target (Not persisted between runs)  

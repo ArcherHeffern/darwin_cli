@@ -31,7 +31,7 @@ pub fn list_tests(darwin_path: &Path) {
 }
 
 pub fn run_test_for_student(darwin_path: &Path, student: &str, test: &str) {
-    match run_tests::run_test_for_student(darwin_path, student, test) {
+    match run_tests::run_test_for_student(darwin_path, darwin_path.join("project").as_path(), student, test) {
         Ok(()) => {},
         Err(e) => {
             eprintln!("{}", e);
@@ -51,6 +51,7 @@ pub fn run_tests(darwin_path: &Path, test: &str) {
         println!("Processing '{}'", student);
         if let Err(e) = run_tests::run_test_for_student(
             darwin_path,
+            darwin_path.join("project").as_path(),
             &student,
             test,
         ) {

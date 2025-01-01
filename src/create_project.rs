@@ -41,10 +41,9 @@ pub fn init_darwin(
         }
     }
     fs::create_dir(darwin_path)?;
-    fs::create_dir(darwin_path.join("project"))?;
-    fs::create_dir(darwin_path.join("project").join("src"))?;
     fs::create_dir(darwin_path.join("submission_diffs"))?;
     fs::create_dir(darwin_path.join("main"))?;
+    fs::create_dir(darwin_path.join("test"))?;
     fs::create_dir(darwin_path.join("results"))?;
     File::create(darwin_path.join("tests_ran"))?;
     File::create(darwin_path.join("results").join("compile_errors"))?;
@@ -60,7 +59,7 @@ pub fn init_darwin(
     )?;
     util::copy_dir_all(
         skeleton_path.join("src").join("test"),
-        darwin_path.join("project").join("src").join("test"),
+        darwin_path.join("test"),
         &copy_ignore_set,
     )?;
 

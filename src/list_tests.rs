@@ -3,7 +3,7 @@ use std::{collections::HashSet, path::Path};
 use crate::util::list_files_recursively;
 
 pub fn list_tests(darwin_path: &Path) -> HashSet<String> {
-    let test_dir = darwin_path.join("project").join("src").join("test").join("java");
+    let test_dir = darwin_path.join("test").join("java");
     let test_dir_str = test_dir.to_str().unwrap();
     let files = list_files_recursively(&test_dir);
 
