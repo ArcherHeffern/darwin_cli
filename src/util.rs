@@ -158,16 +158,34 @@ pub fn set_active_project(
         fs::remove_dir_all(maybe_target_dir)?;
     }
 
+    patch(project_path.join("main").as_path(), diff_path, project_main_path.as_path(), copy_ignore_set)?;
+
+    fs::rename(
+        project_path
+            .join("project")
+            .join("src")
+            .join("main")
+            .join("pom.xml"),
+        project_path.join("project").join("pom.xml"),
+    )?;
+
+    Ok(())
+}
+
+pub fn patch(patch_path: &Path, diff_path: &Path, dest_path: &Path, copy_ignore_set: &HashSet<&str>) -> Result<(), io::Error> {
+    // patch_path: Directory containing original files
+    // diff_path: Diff to be patched into patch_path
+    // Destination path
     copy_dir_all(
-        project_path.join("main"),
-        &project_main_path,
+        patch_path,
+        &dest_path,
         copy_ignore_set,
     )
     .unwrap();
 
     let mut output = Command::new("patch")
         .arg("-d")
-        .arg(&project_main_path)
+        .arg(&dest_path)
         .arg("-p2")
         .stdin(Stdio::piped())
         .stdout(Stdio::null())
@@ -190,16 +208,8 @@ pub fn set_active_project(
         eprintln!("Patch command failed with status: {}", status);
     }
 
-    fs::rename(
-        project_path
-            .join("project")
-            .join("src")
-            .join("main")
-            .join("pom.xml"),
-        project_path.join("project").join("pom.xml"),
-    )?;
-
     Ok(())
+
 }
 
 pub fn file_contains_line(file: &Path, line: &str) -> Result<bool, io::Error> {

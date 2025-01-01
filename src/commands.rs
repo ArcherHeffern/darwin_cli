@@ -1,7 +1,7 @@
-use std::{collections::HashSet, fs::OpenOptions, io::{stdin, BufRead}, path::Path, process::exit};
+use std::{collections::HashSet, fs::{create_dir, remove_dir, remove_file, OpenOptions}, io::{stdin, BufRead}, path::Path, process::exit};
 
 use crate::{
-    create_project, download_results, list_students, list_tests, run_tests::process_diff_tests, util::{self, is_valid_test_string}, view_student_results::{self, TestResultError}
+    create_project, download_results, list_students::{self}, list_tests, run_tests::process_diff_tests, util::{self, is_valid_test_string, patch}, view_student_results::{self, TestResultError}
 };
 
 pub fn create_darwin(
@@ -155,4 +155,32 @@ pub fn download_results_by_classname(project_path: &Path, test: &str, outfile: &
     download_results::download_results_by_classname(project_path, out_file, test).unwrap();
 }
 
-pub fn view_student_submission() {}
+pub fn view_student_submission(project_path: &Path, student: &str, copy_ignore_set: &HashSet<&str>) {
+    if !list_students::list_students(project_path).iter().any(|s|s==student) {
+        eprintln!("Student '{}' does not exist\n", student);
+        exit(1);
+    }
+    let student_diff_path = project_path.join("submission_diffs").join(student);
+    if !student_diff_path.is_file() {
+        eprintln!("Student diff '{}' does not exist or is not a file", student_diff_path.to_string_lossy());
+        exit(1);
+    }
+    let dest = Path::new(student);
+    if dest.exists() {
+        println!("'{}' Exists. Continue? (Y/N)", student);
+        let mut s = String::new();
+        stdin().lock().read_line(&mut s).expect("Stdin to work");
+        s = s.to_lowercase();
+        if s != "y\n" {
+            exit(0);
+        }
+    }
+    if dest.is_file() {
+        remove_file(dest).expect(&format!("Can remove file '{}'", student));
+    } else if dest.is_dir() {
+        remove_dir(dest).expect(&format!("Can remove directory '{}'", student));
+    }
+
+    create_dir(dest).expect(&format!("Can create directory '{}", student));
+    patch(project_path.join("main").as_path(), student_diff_path.as_path(), dest, copy_ignore_set).unwrap();
+}

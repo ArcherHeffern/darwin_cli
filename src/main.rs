@@ -207,8 +207,8 @@ fn main() {
         SubCommand::DownloadResultsByClassName { test, outfile } => {
             commands::download_results_by_classname(project_path, test.as_str(), outfile.as_str());
         }
-        _ => {
-            todo!("");
+        SubCommand::ViewStudentSubmission { student } => {
+            commands::view_student_submission(project_path, student.as_str(), &copy_ignore_set);
         }
     }
 }
