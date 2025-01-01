@@ -1,7 +1,7 @@
 use std::{collections::HashSet, path::Path};
 
 use crate::{
-    create_project, list_students, run_tests::process_diff_tests, util::{self, is_valid_test_string}, view_student_results, TestResult
+    create_project, list_students, list_tests, run_tests::process_diff_tests, util::{self, is_valid_test_string}, view_student_results::{self, TestResultError}
 };
 
 pub fn create_darwin(
@@ -35,7 +35,7 @@ pub fn run_tests_for_student(project_path: &Path, student: &str, tests: &str, co
         eprintln!("Expected comma separated list of valid tests. eg: 'test1,test2,test3");
         return;
     }
-    if !list_students::list_students(project_path).contains(student) {
+    if !list_students::list_students(project_path).iter().any(|s| s==student) {
         eprintln!("Student {} was not found", student);
         return;
     }
@@ -83,11 +83,33 @@ pub fn run_tests(project_path: &Path, tests: &str, copy_ignore_set: &HashSet<&st
 pub fn view_results() {}
 pub fn view_student_submission() {}
 pub fn view_student_result(project_path: &Path, student: &str, test: &str) {
-     if !list_students::list_students(project_path).contains(student) {
+     if !list_students::list_students(project_path).iter().any(|s| s==student) {
         eprintln!("Student '{}' not recognized", student);
         return;
      }
 
-     println!("{:?}", view_student_results::parse_test_results(project_path, student, test));
+     if !list_tests::list_tests(project_path).contains(test) {
+        eprintln!("Test '{}' not recognized", test);
+        return;
+     }
+
+    match view_student_results::parse_test_results(project_path, student, test) {
+        Ok(result) => {
+            println!("{}", result.summarize());
+        },
+        Err(e) => {
+            match e {
+                TestResultError::IOError(er) => {
+                    eprintln!("{}", er);
+                }
+                TestResultError::CompilationError => {
+                    eprintln!("Compilation Error");
+                }
+                TestResultError::TestsNotRun => {
+                    eprintln!("Tests have not been run for this student");
+                }
+            }
+        }
+    }
 }
 pub fn download_results() {}

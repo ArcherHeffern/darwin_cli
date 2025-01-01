@@ -1,7 +1,7 @@
 use camino::Utf8PathBuf;
 use clap::{Parser, Subcommand};
-use std::collections::HashMap;
 use std::path::Path;
+use std::time::Duration;
 use std::{collections::HashSet, fs};
 
 mod commands;
@@ -48,19 +48,42 @@ enum SubCommand {
 }
 
 #[derive(Debug)]
-enum TestOk {
-    CompileError,
-    NoCompileError {
-        correct: i32,
-        errors: HashMap<i32, String>,
-        failures: HashMap<i32, String>,
-    }
-}
-#[derive(Debug)]
-struct TestResult {
+struct TestResults {
     student: String,
     test: String,
-    s: TestOk,
+    results: Vec<TestResult>
+}
+
+impl TestResults {
+    fn summarize(&self) -> String {
+        let num_correct = self.results.iter().filter(|r|r.msg == StatusMsg::NONE).count();
+        let num_failed = self.results.iter().filter(|r|matches!(r.msg, StatusMsg::FAILURE{..})).count();
+        let num_errored = self.results.iter().filter(|r|matches!(r.msg, StatusMsg::ERROR {..})).count();
+        format!("{}_{}: Correct: {}, Failed: {}, Errored: {}", self.student, self.test, num_correct, num_failed, num_errored)
+    }
+}
+
+#[derive(Debug)]
+struct TestResult {
+    name: String,
+    classname: String,
+    time: Duration,
+    msg: StatusMsg,
+}
+
+
+#[derive(Debug)]
+#[derive(PartialEq)]
+enum StatusMsg {
+    NONE,
+    FAILURE {
+        message: Option<String>,
+        type_: String, 
+    },
+    ERROR {
+        message: Option<String>,
+        type_: String
+    }
 }
 
 fn main() {
