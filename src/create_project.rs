@@ -9,7 +9,7 @@ use zip::result::ZipError;
 use zip::ZipArchive;
 
 pub fn init_darwin(
-    project_path: &Path,
+    darwin_path: &Path,
     skeleton_path: &Path,
     submission_zipfile_path: &Path,
     copy_ignore_set: &HashSet<&str>,
@@ -19,7 +19,7 @@ pub fn init_darwin(
 
     let stdin = io::stdin();
     let mut stdout = io::stdout();
-    if project_path.exists() {
+    if darwin_path.exists() {
         print!("A project already exists here. Overwrite? (Y/n) ");
         stdout.flush()?;
         loop {
@@ -28,7 +28,7 @@ pub fn init_darwin(
 
             match line.as_str() {
                 "y\n" => {
-                    fs::remove_dir_all(project_path)?;
+                    fs::remove_dir_all(darwin_path)?;
                     break;
                 }
                 "n\n" => {
@@ -40,37 +40,37 @@ pub fn init_darwin(
             stdout.flush()?;
         }
     }
-    fs::create_dir(project_path)?;
-    fs::create_dir(project_path.join("project"))?;
-    fs::create_dir(project_path.join("project").join("src"))?;
-    fs::create_dir(project_path.join("submission_diffs"))?;
-    fs::create_dir(project_path.join("main"))?;
-    fs::create_dir(project_path.join("results"))?;
-    File::create(project_path.join("tests_ran"))?;
-    File::create(project_path.join("results").join("compile_errors"))?;
+    fs::create_dir(darwin_path)?;
+    fs::create_dir(darwin_path.join("project"))?;
+    fs::create_dir(darwin_path.join("project").join("src"))?;
+    fs::create_dir(darwin_path.join("submission_diffs"))?;
+    fs::create_dir(darwin_path.join("main"))?;
+    fs::create_dir(darwin_path.join("results"))?;
+    File::create(darwin_path.join("tests_ran"))?;
+    File::create(darwin_path.join("results").join("compile_errors"))?;
     fs::copy(
         skeleton_path.join("pom.xml"),
-        project_path.join("main").join("pom.xml"),
+        darwin_path.join("main").join("pom.xml"),
     )?;
 
     util::copy_dir_all(
         skeleton_path.join("src").join("main"),
-        project_path.join("main"),
+        darwin_path.join("main"),
         &copy_ignore_set,
     )?;
     util::copy_dir_all(
         skeleton_path.join("src").join("test"),
-        project_path.join("project").join("src").join("test"),
+        darwin_path.join("project").join("src").join("test"),
         &copy_ignore_set,
     )?;
 
-    submission_to_diffs(project_path, submission_zipfile_path, &copy_ignore_set)?;
+    submission_to_diffs(darwin_path, submission_zipfile_path, &copy_ignore_set)?;
 
     Ok(())
 }
 
 fn submission_to_diffs(
-    project_path: &Path,
+    darwin_path: &Path,
     submission_zipfile_path: &Path,
     file_ignore_set: &HashSet<&str>,
 ) -> Result<(), io::Error> {
@@ -117,13 +117,13 @@ fn submission_to_diffs(
 
         let mut output = Command::new("diff")
             .arg("-ruN")
-            .arg(project_path.join("main").to_str().unwrap())
+            .arg(darwin_path.join("main").to_str().unwrap())
             .arg(src_main_dir.path())
             .stdout(Stdio::piped())
             .spawn()?;
 
         let diff_file = match File::create(
-            project_path
+            darwin_path
                 .join("submission_diffs")
                 .join(student_name.clone()),
         ) {

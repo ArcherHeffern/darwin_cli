@@ -11,15 +11,15 @@ pub enum TestResultError {
     TestsNotRun
 }
 
-pub fn parse_test_results(project_path: &Path, student: &str, test: &str) -> Result<TestResults, TestResultError> {
+pub fn parse_test_results(darwin_path: &Path, student: &str, test: &str) -> Result<TestResults, TestResultError> {
     let mut test_results = TestResults { student: student.to_string(), test: test.to_string(), results: Vec::new() };
-    let compile_error_path = Path::new(project_path).join("results").join("compile_errors");
+    let compile_error_path = Path::new(darwin_path).join("results").join("compile_errors");
 
     if file_contains_line(&compile_error_path, student).unwrap() {
         return Err(TestResultError::CompilationError);
     }
 
-    let test_results_file_path = Path::new(project_path).join("results").join(format!("{}_{}", student, test));
+    let test_results_file_path = Path::new(darwin_path).join("results").join(format!("{}_{}", student, test));
     if !test_results_file_path.is_file() {
         return Err(TestResultError::TestsNotRun);
     }

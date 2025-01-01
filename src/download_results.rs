@@ -2,16 +2,16 @@ use std::{error::Error, fs::File, io::BufWriter, path::Path};
 
 use crate::{list_students::list_students, list_tests::list_tests, view_student_results::parse_test_results};
 
-pub fn download_results_summary(project_path: &Path, f: File, test: &str) -> Result<(), Box<dyn Error>> {
+pub fn download_results_summary(darwin_path: &Path, f: File, test: &str) -> Result<(), Box<dyn Error>> {
     let f = BufWriter::new(f);
     let mut wtr = csv::Writer::from_writer(f);
     let headers = vec![String::from("Name"), String::from("Error"), String::from("Correct"), String::from("Errored"), String::from("Failed")];
 
     wtr.write_record(&headers)?;
-    for student in list_students(project_path) {
+    for student in list_students(darwin_path) {
         let mut cur_row = vec![String::new(); headers.len()];
         cur_row[0] = student.clone();
-        match parse_test_results(project_path, &student, test) {
+        match parse_test_results(darwin_path, &student, test) {
             Ok(res) => {
                 let summary = res.summary();
                 cur_row[2] = format!("{}", summary.0);
@@ -37,10 +37,10 @@ pub fn download_results_summary(project_path: &Path, f: File, test: &str) -> Res
     Ok(())
 }
 
-pub fn download_results_by_classname(project_path: &Path, f: File, test: &str) -> Result<(), Box<dyn Error>> {
+pub fn download_results_by_classname(darwin_path: &Path, f: File, test: &str) -> Result<(), Box<dyn Error>> {
     let f = BufWriter::new(f);
     let mut wtr = csv::Writer::from_writer(f);
-    let tests = list_tests(project_path);
+    let tests = list_tests(darwin_path);
     let mut headers = vec![String::from("Name"), String::from("Error")];
     for test in tests {
         headers.push(test);
@@ -48,10 +48,10 @@ pub fn download_results_by_classname(project_path: &Path, f: File, test: &str) -
 
     wtr.write_record(&headers)?;
 
-    for student in list_students(project_path) {
+    for student in list_students(darwin_path) {
         let mut cur_row = vec![String::new(); headers.len()];
         cur_row[0] = student.clone();
-        match parse_test_results(project_path, &student, test) {
+        match parse_test_results(darwin_path, &student, test) {
             Ok(res) => {
                 let summary = res.summarize_by_classname();
                 for (i, header) in headers.iter().enumerate() {

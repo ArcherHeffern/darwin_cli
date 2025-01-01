@@ -142,13 +142,13 @@ fn main() {
     copy_ignore_set.insert(".DS_Store");
     copy_ignore_set.insert(".gitignore");
 
-    let project_path: &Path = Path::new(".darwin");
+    let darwin_path: &Path = Path::new(".darwin");
 
     let cli = Args::parse();
 
     let command = cli.command;
     if let SubCommand::CreateProject { .. } = command {
-    } else if !project_path.exists() {
+    } else if !darwin_path.exists() {
         eprintln!("create project first");
         return;
     }
@@ -159,54 +159,54 @@ fn main() {
             moodle_submissions_zipfile,
         } => {
             commands::create_darwin(
-                project_path,
+                darwin_path,
                 project_skeleton.as_std_path(),
                 moodle_submissions_zipfile.as_std_path(),
                 &copy_ignore_set,
             );
         }
         SubCommand::DeleteProject => {
-            fs::remove_dir_all(project_path).unwrap();
+            fs::remove_dir_all(darwin_path).unwrap();
         }
         SubCommand::ListTests => {
-            commands::list_tests(project_path);
+            commands::list_tests(darwin_path);
         }
         SubCommand::ListStudents => {
-            commands::list_students(project_path);
+            commands::list_students(darwin_path);
         }
         SubCommand::TestStudent { student, tests } => {
             commands::run_test_for_student(
-                project_path,
+                darwin_path,
                 student.as_str(),
                 tests.as_str(),
             );
         },
         SubCommand::TestAll { tests } => {
             commands::run_tests(
-                project_path,
+                darwin_path,
                 tests.as_str()
             )
         }
         SubCommand::ViewStudentResultSummary { student, test } => {
-            commands::view_student_result(project_path, &student, &test, true);
+            commands::view_student_result(darwin_path, &student, &test, true);
         }
         SubCommand::ViewStudentResultByClassName { student, test } => {
-            commands::view_student_result(project_path, &student, &test, false);
+            commands::view_student_result(darwin_path, &student, &test, false);
         }
         SubCommand::ViewAllStudentsResultsSummary { test } => {
-            commands::view_all_results(project_path, test.as_str(), true);
+            commands::view_all_results(darwin_path, test.as_str(), true);
         }
         SubCommand::ViewAllStudentsResultsByClassName { test } => {
-            commands::view_all_results(project_path, test.as_str(), false);
+            commands::view_all_results(darwin_path, test.as_str(), false);
         }
         SubCommand::DownloadResultsSummary { test, outfile } => {
-            commands::download_results_summary(project_path, test.as_str(), outfile.as_str());
+            commands::download_results_summary(darwin_path, test.as_str(), outfile.as_str());
         }
         SubCommand::DownloadResultsByClassName { test, outfile } => {
-            commands::download_results_by_classname(project_path, test.as_str(), outfile.as_str());
+            commands::download_results_by_classname(darwin_path, test.as_str(), outfile.as_str());
         }
         SubCommand::ViewStudentSubmission { student } => {
-            commands::view_student_submission(project_path, student.as_str());
+            commands::view_student_submission(darwin_path, student.as_str());
         }
     }
 }

@@ -115,8 +115,8 @@ fn index_of_substr(s: &str, substr: &str) -> Option<usize> {
     return None;
 }
 
-pub fn find_student_diff_file(project_path: &Path, student_name: &str) -> Option<PathBuf> {
-    let diff_path = project_path.join("submission_diffs").join(student_name);
+pub fn find_student_diff_file(darwin_path: &Path, student_name: &str) -> Option<PathBuf> {
+    let diff_path = darwin_path.join("submission_diffs").join(student_name);
     if diff_path.is_file() {
         return Some(diff_path);
     }
@@ -124,20 +124,20 @@ pub fn find_student_diff_file(project_path: &Path, student_name: &str) -> Option
     None
 }
 
-pub fn is_test(project_path: &Path, test: &str) -> bool {
+pub fn is_test(darwin_path: &Path, test: &str) -> bool {
     // validate list of tests is comma separated and all exist
-    list_tests::list_tests(project_path).contains(test)
+    list_tests::list_tests(darwin_path).contains(test)
 }
 
-pub fn is_student(project_path: &Path, student: &str) -> bool {
-    list_students::list_students(project_path).iter().any(|s|s==student)
+pub fn is_student(darwin_path: &Path, student: &str) -> bool {
+    list_students::list_students(darwin_path).iter().any(|s|s==student)
 }
 
 pub fn set_active_project(
-    project_path: &Path,
+    darwin_path: &Path,
     diff_path: &Path,
 ) -> Result<(), io::Error> {
-    let project_main_path = project_path.join("project").join("src").join("main");
+    let project_main_path = darwin_path.join("project").join("src").join("main");
     if project_main_path.exists() {
         if let Err(e) = fs::remove_dir_all(&project_main_path) {
             eprintln!(
@@ -149,20 +149,20 @@ pub fn set_active_project(
         }
     }
 
-    let maybe_target_dir = project_path.join("project").join("target");
+    let maybe_target_dir = darwin_path.join("project").join("target");
     if maybe_target_dir.exists() {
         fs::remove_dir_all(maybe_target_dir)?;
     }
 
-    patch(project_path.join("main").as_path(), diff_path, project_main_path.as_path())?;
+    patch(darwin_path.join("main").as_path(), diff_path, project_main_path.as_path())?;
 
     fs::rename(
-        project_path
+        darwin_path
             .join("project")
             .join("src")
             .join("main")
             .join("pom.xml"),
-        project_path.join("project").join("pom.xml"),
+        darwin_path.join("project").join("pom.xml"),
     )?;
 
     Ok(())
