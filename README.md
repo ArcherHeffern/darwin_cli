@@ -2,6 +2,21 @@
 `cargo run -- ` : Shows help  
 `cargo run -- create-project PROJECT_SKELETON MOODLE_SUBMISSIONS_ZIPFILE` : Initialize darwin  
 
+# Commands
+create-project                           
+delete-project                           
+list-students                            
+list-tests                               
+view-student-submission                  
+test-student                             
+test-all                                 
+view-student-result-summary              
+view-student-result-by-class-name        
+view-all-students-results-summary        
+view-all-students-results-by-class-name  
+download-results-summary                 
+download-results-by-class-name 
+
 # Stats
 ## Memory Saving (Using PA1)
 - All students submissions Zipped: 75M
