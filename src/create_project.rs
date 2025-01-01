@@ -46,6 +46,7 @@ pub fn init_darwin(
     fs::create_dir(project_path.join("submission_diffs"))?;
     fs::create_dir(project_path.join("main"))?;
     fs::create_dir(project_path.join("results"))?;
+    File::create(project_path.join("tests_ran"))?;
     File::create(project_path.join("results").join("compile_errors"))?;
     fs::copy(
         skeleton_path.join("pom.xml"),

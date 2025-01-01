@@ -8,7 +8,7 @@ use std::{fs::File, io, path::Path};
 use zip::result::ZipError;
 use zip::ZipArchive;
 
-use crate::list_tests;
+use crate::{list_students, list_tests};
 
 pub fn copy_dir_all(
     src: impl AsRef<Path>,
@@ -124,22 +124,18 @@ pub fn find_student_diff_file(project_path: &Path, student_name: &str) -> Option
     None
 }
 
-pub fn is_valid_test_string(project_path: &Path, tests: &str) -> bool {
+pub fn is_test(project_path: &Path, test: &str) -> bool {
     // validate list of tests is comma separated and all exist
-    let actual_tests = list_tests::list_tests(project_path);
+    list_tests::list_tests(project_path).contains(test)
+}
 
-    for test in tests.split(',') {
-        if !actual_tests.contains(&test.to_string()) {
-            return false;
-        }
-    }
-    return true;
+pub fn is_student(project_path: &Path, student: &str) -> bool {
+    list_students::list_students(project_path).iter().any(|s|s==student)
 }
 
 pub fn set_active_project(
     project_path: &Path,
     diff_path: &Path,
-    copy_ignore_set: &HashSet<&str>,
 ) -> Result<(), io::Error> {
     let project_main_path = project_path.join("project").join("src").join("main");
     if project_main_path.exists() {
@@ -158,7 +154,7 @@ pub fn set_active_project(
         fs::remove_dir_all(maybe_target_dir)?;
     }
 
-    patch(project_path.join("main").as_path(), diff_path, project_main_path.as_path(), copy_ignore_set)?;
+    patch(project_path.join("main").as_path(), diff_path, project_main_path.as_path())?;
 
     fs::rename(
         project_path
@@ -172,14 +168,14 @@ pub fn set_active_project(
     Ok(())
 }
 
-pub fn patch(patch_path: &Path, diff_path: &Path, dest_path: &Path, copy_ignore_set: &HashSet<&str>) -> Result<(), io::Error> {
+pub fn patch(patch_path: &Path, diff_path: &Path, dest_path: &Path) -> Result<(), io::Error> {
     // patch_path: Directory containing original files
     // diff_path: Diff to be patched into patch_path
     // Destination path
     copy_dir_all(
         patch_path,
         &dest_path,
-        copy_ignore_set,
+        &HashSet::new()
     )
     .unwrap();
 

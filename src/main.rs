@@ -175,18 +175,16 @@ fn main() {
             commands::list_students(project_path);
         }
         SubCommand::TestStudent { student, tests } => {
-            commands::run_tests_for_student(
+            commands::run_test_for_student(
                 project_path,
                 student.as_str(),
                 tests.as_str(),
-                &copy_ignore_set,
             );
         },
         SubCommand::TestAll { tests } => {
             commands::run_tests(
                 project_path,
-                tests.as_str(),
-                &copy_ignore_set,
+                tests.as_str()
             )
         }
         SubCommand::ViewStudentResultSummary { student, test } => {
@@ -208,7 +206,7 @@ fn main() {
             commands::download_results_by_classname(project_path, test.as_str(), outfile.as_str());
         }
         SubCommand::ViewStudentSubmission { student } => {
-            commands::view_student_submission(project_path, student.as_str(), &copy_ignore_set);
+            commands::view_student_submission(project_path, student.as_str());
         }
     }
 }

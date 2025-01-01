@@ -1,20 +1,49 @@
 use std::{
-    collections::HashSet, fs::{rename, File, OpenOptions}, io::{self, prelude::*}, path::Path, process::{Command, Stdio}
+    collections::HashSet, fs::{rename, OpenOptions}, io::{self, prelude::*, ErrorKind}, path::Path, process::{Command, Stdio}
 };
 
-use crate::{util::set_active_project, TestResult};
+use crate::util::{self, is_student, is_test, set_active_project};
 
+pub fn run_test_for_student(project_path: &Path, student: &str, test: &str) -> io::Result<()> {
+    if !is_test(project_path, test) {
+        return Err(io::Error::new(ErrorKind::InvalidInput, format!("Test '{}' was not found", test)));
+    }
+    if !is_student(project_path, student) {
+        return Err(io::Error::new(ErrorKind::InvalidInput, format!("Student '{}' was not found", student)));
+    }
+
+    if util::file_contains_line(project_path.join("tests_ran").as_path(), test)? {
+        return Ok(())
+    }
+
+    match util::find_student_diff_file(project_path, student).take() {
+        Some(diff_path) => {
+            // Ensure tests are valid tests
+            match process_diff_tests(
+                project_path,
+                student,
+                &Path::new(&diff_path),
+                test,
+            ) {
+                Err(e) => Err(e),
+                Ok(()) => Ok(())
+            }
+        }
+        None => {
+            Err(io::Error::new(ErrorKind::NotFound, format!("This should not be possible. Perhaps you deleted '{}' diff file?", student)))
+        }
+    }
+}
 // Run test
 // Parse test results
-pub fn process_diff_tests(
+fn process_diff_tests(
     project_path: &Path,
     student: &str,
     diff_path: &Path,
     tests: &str,
-    copy_ignore_set: &HashSet<&str>,
 ) -> Result<(), io::Error> {
     // Assumes valid inputs
-    set_active_project(project_path, diff_path, &copy_ignore_set)?;
+    set_active_project(project_path, diff_path)?;
     if let Err(e) = compile(project_path) {
         let compile_error_path = project_path.join("results").join("compile_errors");
         let mut compile_error_file = OpenOptions::new().read(true).append(true).open(compile_error_path).unwrap();

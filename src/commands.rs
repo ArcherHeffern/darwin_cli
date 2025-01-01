@@ -1,7 +1,7 @@
-use std::{collections::HashSet, fs::{create_dir, remove_dir, remove_file, OpenOptions}, io::{stdin, BufRead}, path::Path, process::exit};
+use std::{collections::HashSet, fs::{create_dir, remove_dir, remove_file, File, OpenOptions}, io::{prelude::*, stdin, BufRead}, path::{Path, PathBuf}, process::exit};
 
 use crate::{
-    create_project, download_results, list_students::{self}, list_tests, run_tests::process_diff_tests, util::{self, is_valid_test_string, patch}, view_student_results::{self, TestResultError}
+    create_project, download_results, list_students::{self}, list_tests, run_tests::{self}, util::{is_test, patch}, view_student_results::{self, TestResultError}
 };
 
 pub fn create_darwin(
@@ -30,54 +30,35 @@ pub fn list_tests(project_path: &Path) {
     }
 }
 
-pub fn run_tests_for_student(project_path: &Path, student: &str, tests: &str, copy_ignore_set: &HashSet<&str>) {
-    if !is_valid_test_string(project_path, tests) {
-        eprintln!("Expected comma separated list of valid tests. eg: 'test1,test2,test3");
-        return;
-    }
-    if !list_students::list_students(project_path).iter().any(|s| s==student) {
-        eprintln!("Student {} was not found", student);
-        return;
-    }
-
-    match util::find_student_diff_file(project_path, student).take() {
-        Some(diff_path) => {
-            // Ensure tests are valid tests
-            if let Err(e) = process_diff_tests(
-                project_path,
-                student,
-                &Path::new(&diff_path),
-                tests,
-                &copy_ignore_set,
-            ) {
-                eprintln!("{}", e);
-            }
-        }
-        None => {
-            eprintln!("Not a student");
+pub fn run_test_for_student(project_path: &Path, student: &str, test: &str) {
+    match run_tests::run_test_for_student(project_path, student, test) {
+        Ok(()) => {},
+        Err(e) => {
+            eprintln!("{}", e);
         }
     }
 }
 
-pub fn run_tests(project_path: &Path, tests: &str, copy_ignore_set: &HashSet<&str>) {
-    if !is_valid_test_string(project_path, tests) {
-        eprintln!("Expected comma separated list of valid tests. eg: 'test1,test2,test3");
+pub fn run_tests(project_path: &Path, test: &str) {
+    if !is_test(project_path, test) {
+        eprintln!("Test {} not recognized", test);
         return;
     }
 
-    for diff_path in project_path.join("submission_diffs").read_dir().unwrap() {
-        let diff_path = diff_path.unwrap().path();
-        println!("Processing {}", diff_path.file_name().unwrap().to_str().unwrap());
-        if let Err(e) = process_diff_tests(
+    for diff_path in project_path.join("submission_diffs").read_dir().expect("Project to be initialized and submission_diffs directory to exist") {
+        let diff_path = diff_path.unwrap();
+        let student = diff_path.file_name().into_string().expect("?");
+        println!("Processing '{}'", student);
+        if let Err(e) = run_tests::run_test_for_student(
             project_path,
-            diff_path.file_name().unwrap().to_str().unwrap(),
-            &Path::new(&diff_path),
-            tests,
-            &copy_ignore_set,
+            &student,
+            test,
         ) {
             eprintln!("{}", e);
         }
     }
+    let mut f = OpenOptions::new().write(true).append(true).open(project_path.join("tests_ran")).expect("If project has been initialized, tests_ran must exist");
+    write!(f, "{}\n", test).expect("tests_ran is writable");
 }
 
 pub fn view_student_result(project_path: &Path, student: &str, test: &str, summarize: bool) {
@@ -116,13 +97,14 @@ pub fn view_student_result(project_path: &Path, student: &str, test: &str, summa
 }
 
 pub fn view_all_results(project_path: &Path, test: &str, summarize: bool) {
-     if !list_tests::list_tests(project_path).contains(test) {
+    if !list_tests::list_tests(project_path).contains(test) {
         eprintln!("Test '{}' not recognized", test);
         return;
-     }
-    for student in list_students::list_students(project_path) {
-        view_student_result(project_path, student.as_str(), test, summarize);
     }
+    list_students::list_students(project_path).iter().for_each(|student| {
+        println!("Processing '{}'", student);
+        view_student_result(project_path, student, test, summarize);
+    });
 }
 
 pub fn download_results_summary(project_path: &Path, test: &str, outfile: &str) {
@@ -155,7 +137,7 @@ pub fn download_results_by_classname(project_path: &Path, test: &str, outfile: &
     download_results::download_results_by_classname(project_path, out_file, test).unwrap();
 }
 
-pub fn view_student_submission(project_path: &Path, student: &str, copy_ignore_set: &HashSet<&str>) {
+pub fn view_student_submission(project_path: &Path, student: &str) {
     if !list_students::list_students(project_path).iter().any(|s|s==student) {
         eprintln!("Student '{}' does not exist\n", student);
         exit(1);
@@ -182,5 +164,5 @@ pub fn view_student_submission(project_path: &Path, student: &str, copy_ignore_s
     }
 
     create_dir(dest).expect(&format!("Can create directory '{}", student));
-    patch(project_path.join("main").as_path(), student_diff_path.as_path(), dest, copy_ignore_set).unwrap();
+    patch(project_path.join("main").as_path(), student_diff_path.as_path(), dest).unwrap();
 }
