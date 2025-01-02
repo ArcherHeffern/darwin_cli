@@ -1,7 +1,7 @@
-use std::{collections::HashSet, fs::{create_dir, remove_dir, remove_file, File, OpenOptions}, io::{prelude::*, stdin, BufRead}, path::{Path, PathBuf}, process::exit};
+use std::{collections::HashSet, fs::{create_dir, remove_dir, remove_file, OpenOptions}, io::{stdin, BufRead}, path::Path, process::exit};
 
 use crate::{
-    clean, create_project, download_results, list_students::{self}, list_tests, run_tests::{self}, util::{is_test, patch}, view_student_results::{self, TestResultError}
+    clean, create_project, download_results, list_students::{self}, list_tests, run_tests::{self}, util::patch, view_student_results::{self, TestResultError}
 };
 
 pub fn create_darwin(

@@ -1,6 +1,6 @@
 use std::collections::HashSet;
-use std::fs::{self, create_dir, create_dir_all, remove_dir_all};
-use std::io::{copy, prelude::*, BufReader, BufWriter, Error, Result};
+use std::fs::{self, create_dir, create_dir_all};
+use std::io::{copy, prelude::*, BufReader, BufWriter, Result};
 use std::os::unix::fs::symlink;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
@@ -34,15 +34,13 @@ pub fn list_files_recursively(dir: &Path) -> Vec<PathBuf> {
     if dir.is_dir() {
         match fs::read_dir(dir) {
             Ok(entries) => {
-                for entry in entries {
-                    if let Ok(entry) = entry {
-                        let path = entry.path();
-                        if path.is_file() {
-                            files.push(path);
-                        } else if path.is_dir() {
-                            let mut sub_files = list_files_recursively(&path);
-                            files.append(&mut sub_files);
-                        }
+                for entry in entries.into_iter().flatten() {
+                    let path = entry.path();
+                    if path.is_file() {
+                        files.push(path);
+                    } else if path.is_dir() {
+                        let mut sub_files = list_files_recursively(&path);
+                        files.append(&mut sub_files);
                     }
                 }
             }
@@ -170,14 +168,14 @@ pub fn patch(patch_path: &Path, diff_path: &Path, dest_path: &Path) -> Result<()
     // Destination path
     copy_dir_all(
         patch_path,
-        &dest_path,
+        dest_path,
         &HashSet::new()
     )
     .unwrap();
 
     let mut output = Command::new("patch")
         .arg("-d")
-        .arg(&dest_path)
+        .arg(dest_path)
         .arg("-p2")
         .stdin(Stdio::piped())
         .stdout(Stdio::null())

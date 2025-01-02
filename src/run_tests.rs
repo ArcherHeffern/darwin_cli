@@ -26,12 +26,11 @@ pub fn concurrent_run_tests(darwin_path: &Path, test: &str, num_threads: usize) 
             ) {
                 eprintln!("{}: Error: {}", student, e);
             }
-            ()
         })
     }
     threadpool.join();
     let mut f = OpenOptions::new().append(true).open(darwin_path.join("tests_ran"))?;
-    write!(f, "{}\n", test)?;
+    writeln!(f, "{}", test)?;
     Ok(())
 }
 pub fn run_test_for_student(darwin_path: PathBuf, student: &str, test: &str) -> io::Result<()> {
@@ -111,7 +110,7 @@ fn process_diff_tests(
     relocate_test_results(darwin_path, project_path, student, test)?;
     remove_dir_all(project_path)?;
 
-    return Ok(())
+    Ok(())
 }
 
 fn compile(project_path: &Path) -> Result<(), io::Error> {

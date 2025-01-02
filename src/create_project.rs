@@ -17,7 +17,7 @@ pub fn init_darwin(
     if !skeleton_path.is_dir() {
         return Err(io::Error::new(io::ErrorKind::InvalidInput, "skeleton_path must be a directory"));
     }
-    if !submission_zipfile_path.extension().is_some_and(|ext|ext=="zip") {
+    if !submission_zipfile_path.extension().map_or(true, |ext|ext=="zip") {
         return Err(io::Error::new(io::ErrorKind::InvalidInput, "submission_zipfile path is not a zipfile"));
     }
 
@@ -68,7 +68,7 @@ pub fn init_darwin(
         copy_ignore_set,
     )?;
 
-    submission_to_diffs(darwin_path, submission_zipfile_path, &copy_ignore_set)?;
+    submission_to_diffs(darwin_path, submission_zipfile_path, copy_ignore_set)?;
 
     Ok(())
 }
@@ -107,7 +107,7 @@ fn submission_to_diffs(
         let src_main_dir = tempdir()?;
         if let Err(e) = extract_student_src_main(
             &mut student_project_zip,
-            &src_main_dir.path(),
+            src_main_dir.path(),
             file_ignore_set,
         ) {
             println!("Error extracting {}'s src/main: {}", &student_name, e);
