@@ -1,7 +1,8 @@
+#[macro_use] extern crate rocket;
 use camino::Utf8PathBuf;
 use clap::{Parser, Subcommand};
 use std::collections::HashMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 use std::{collections::HashSet, fs};
 
@@ -14,7 +15,10 @@ mod util;
 mod view_student_results;
 mod download_results;
 mod view_student_submission;
+mod server;
 mod clean;
+mod config;
+
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -66,6 +70,7 @@ enum SubCommand {
         test: String,
         outfile: String
     },
+    Server,
     Clean
 }
 
@@ -147,7 +152,8 @@ fn main() {
     copy_ignore_set.insert(".DS_Store");
     copy_ignore_set.insert(".gitignore");
 
-    let darwin_path: &Path = Path::new(".darwin");
+    let darwin_path: PathBuf = config::darwin_path();
+    let darwin_path: &Path = darwin_path.as_path();
 
     let cli = Args::parse();
 
@@ -216,6 +222,9 @@ fn main() {
         }
         SubCommand::Clean  => {
             commands::clean(darwin_path);
+        }
+        SubCommand::Server => {
+            commands::server();
         }
     }
 }

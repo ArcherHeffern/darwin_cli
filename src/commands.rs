@@ -7,12 +7,7 @@ use std::{
 };
 
 use crate::{
-    clean, create_darwin, download_results,
-    list_students::{self},
-    list_tests,
-    run_tests::{self},
-    util::prompt_yn,
-    view_student_results::{self, TestResultError}, view_student_submission,
+    clean, create_darwin, download_results, list_students::{self}, list_tests, run_tests::{self}, server, util::prompt_yn, view_student_results::{self, TestResultError}, view_student_submission
 };
 
 pub fn create_darwin(
@@ -171,6 +166,13 @@ pub fn view_student_submission(darwin_path: &Path, student: &str) {
     if let Err(e) = view_student_submission::view_student_submission(darwin_path, student, dest) {
         eprintln!("Error viewing student submission: {}", e);
     };
+}
+
+pub fn server() {
+    if let Err(e) = server::server() {
+        eprintln!("{}", e);
+    }
+    println!("Done");
 }
 
 pub fn clean(darwin_path: &Path) {
