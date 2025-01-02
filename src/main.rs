@@ -78,9 +78,9 @@ struct TestResults {
 impl TestResults {
     fn summary(&self) -> (usize, usize, usize) {
         // Correct, errored, failed
-        let num_correct = self.results.iter().filter(|r|r.msg == StatusMsg::NONE).count();
-        let num_errored = self.results.iter().filter(|r|matches!(r.msg, StatusMsg::ERROR {..})).count();
-        let num_failed = self.results.iter().filter(|r|matches!(r.msg, StatusMsg::FAILURE{..})).count();
+        let num_correct = self.results.iter().filter(|r|r.msg == StatusMsg::None).count();
+        let num_errored = self.results.iter().filter(|r|matches!(r.msg, StatusMsg::Error {..})).count();
+        let num_failed = self.results.iter().filter(|r|matches!(r.msg, StatusMsg::Failure{..})).count();
         (num_correct, num_errored, num_failed)
     }
     fn summarize(&self) -> String {
@@ -95,9 +95,9 @@ impl TestResults {
                 m.insert(result.classname.clone(), (0, 0, 0));
             }
             let index = match &result.msg {
-                StatusMsg::NONE => 0,
-                StatusMsg::ERROR { .. } => 1,
-                StatusMsg::FAILURE { .. } => 2
+                StatusMsg::None => 0,
+                StatusMsg::Error { .. } => 1,
+                StatusMsg::Failure { .. } => 2
             };
             if let Some(entry) = m.get_mut(&result.classname) {
                 match index {
@@ -129,12 +129,12 @@ struct TestResult {
 #[derive(Debug)]
 #[derive(PartialEq)]
 enum StatusMsg {
-    NONE,
-    FAILURE {
+    None,
+    Failure {
         message: Option<String>,
         type_: String, 
     },
-    ERROR {
+    Error {
         message: Option<String>,
         type_: String
     }

@@ -65,7 +65,7 @@ pub fn extract_directory_from_zip(
         let file_name = file.name();
 
         // Check if the file is in the specified directory
-        let index_of_dir_name = index_of_substr(file_name, dir_name);
+        let index_of_dir_name = file_name.find(dir_name);
         if index_of_dir_name == None
             || ignore_substrings
                 .iter()
@@ -104,17 +104,6 @@ pub fn extract_directory_from_zip(
     Ok(())
 }
 
-fn index_of_substr(s: &str, substr: &str) -> Option<usize> {
-    if s.len() < substr.len() {
-        return None;
-    }
-    for i in 0..s.len() - substr.len() + 1 {
-        if &s[i..i + substr.len()] == substr {
-            return Some(i);
-        }
-    }
-    return None;
-}
 
 pub fn find_student_diff_file(darwin_path: &Path, student_name: &str) -> Option<PathBuf> {
     let diff_path = darwin_path.join("submission_diffs").join(student_name);

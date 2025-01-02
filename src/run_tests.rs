@@ -104,7 +104,7 @@ fn process_diff_tests(
         let compile_error_path = darwin_path.join("results").join("compile_errors");
         let mut compile_error_file = OpenOptions::new().read(true).append(true).open(compile_error_path).unwrap();
 
-        compile_error_file.write(format!("{}\n", student).as_bytes())?;
+        compile_error_file.write_all(format!("{}\n", student).as_bytes())?;
         return Err(e);
     }
     run_test(project_path, test)?;

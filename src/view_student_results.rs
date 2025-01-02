@@ -34,7 +34,7 @@ pub fn parse_test_results(darwin_path: &Path, student: &str, test: &str) -> Resu
 
     let mut name = String::new();
     let mut classname = String::new();
-    let mut msg = StatusMsg::NONE;
+    let mut msg = StatusMsg::None;
     let mut time = Duration::new(0, 0);
     for e in parser {
         match e {
@@ -48,11 +48,11 @@ pub fn parse_test_results(darwin_path: &Path, student: &str, test: &str) -> Resu
                 } else if _name == failure {
                     let message = get_attr(&attributes, "message");
                     let type_ = get_attr(&attributes, "type").expect(&format!("{}: XML Failure must have type attribute", name));
-                    msg = StatusMsg::FAILURE { message, type_ };
+                    msg = StatusMsg::Failure { message, type_ };
                 } else if _name == error {
                     let message = get_attr(&attributes, "message");
                     let type_ = get_attr(&attributes, "type").expect(&format!("{}: XML Failure must have type attribute", name));
-                    msg = StatusMsg::ERROR { message, type_ };
+                    msg = StatusMsg::Error { message, type_ };
                 }
             }
             Ok(XmlEvent::EndElement { name: _name }) if _name == testcase => {
@@ -61,7 +61,7 @@ pub fn parse_test_results(darwin_path: &Path, student: &str, test: &str) -> Resu
 
                 name = String::new();
                 classname = String::new();
-                msg = StatusMsg::NONE;
+                msg = StatusMsg::None;
                 time = Duration::new(0, 0);
             }
             Err(e) => {
@@ -79,8 +79,7 @@ fn get_attr(owned_attributes: &Vec<OwnedAttribute>, attr: &str) -> Option<String
     owned_attributes.iter().find_map(|a| {
         if a.name==OwnedName::from_str(attr).unwrap() {
             return Some(a.value.clone());
-        } else {
-            return None;
-        }
+        } 
+        None
     })
 }
