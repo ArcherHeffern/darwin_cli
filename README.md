@@ -28,6 +28,21 @@ __Memory reduction: 99.35%__
 ## Grading Speed increase
 Significant. On the order of days. 
 
+### 1 thread
+real    4m52.224s
+user    9m53.217s
+sys     0m35.208s
+
+### 4 threads
+real    2m51.790s
+user    16m56.524s
+sys     1m5.665s
+
+### 8 threads
+real    2m50.506s
+user    16m51.381s
+sys     1m10.835s
+
 # .darwin folder structure
 ```verbatim
 .darwin

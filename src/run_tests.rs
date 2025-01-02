@@ -1,11 +1,46 @@
 use std::{
-    fs::{remove_dir_all, remove_file, rename, OpenOptions}, io::{self, prelude::*, ErrorKind}, path::Path, process::{Command, Stdio}
+    fs::{remove_dir_all, remove_file, rename, OpenOptions}, io::{self, prelude::*, ErrorKind}, path::{Path, PathBuf}, process::{Command, Stdio}
 };
+use threadpool::ThreadPool;
 
 use crate::util::{self, initialize_project, is_student, is_test, set_active_project};
 
-pub fn run_test_for_student(darwin_path: &Path, project_path: &Path, student: &str, test: &str) -> io::Result<()> {
+pub fn concurrent_run_tests(darwin_path: &Path, test: &str, num_threads: usize) -> io::Result<()> {
+    if !is_test(darwin_path, test) {
+        return Err(io::Error::new(ErrorKind::NotFound, format!("Test {} not recognized", test)));
+    }
+
+    let threadpool = ThreadPool::new(num_threads);
+
+    for diff_path in darwin_path.join("submission_diffs").read_dir()? {
+        let diff_path = diff_path.unwrap();
+        let student = diff_path.file_name().into_string().expect("?");
+        let darwin_path_clone = darwin_path.to_path_buf();
+        let test_clone = test.to_string();
+        threadpool.execute(move|| {
+            println!("Processing {}", student);
+            if let Err(e) = run_test_for_student(
+                darwin_path_clone,
+                &student,
+                &test_clone,
+            ) {
+                eprintln!("{}: Error: {}", student, e);
+            }
+            ()
+        })
+    }
+    threadpool.join();
+    let mut f = OpenOptions::new().write(true).append(true).open(darwin_path.join("tests_ran"))?;
+    write!(f, "{}\n", test)?;
+    Ok(())
+}
+pub fn run_test_for_student(darwin_path: PathBuf, student: &str, test: &str) -> io::Result<()> {
+    // Invariants:
+    // - darwin_path is a .darwin project
+    // - Student and test may be valid
     assert!(darwin_path.is_dir());
+
+    let darwin_path = darwin_path.as_path();
 
     if !is_test(darwin_path, test) {
         return Err(io::Error::new(ErrorKind::InvalidInput, format!("Test '{}' was not found", test)));
@@ -18,13 +53,14 @@ pub fn run_test_for_student(darwin_path: &Path, project_path: &Path, student: &s
         return Ok(());
     }
     
+    let project_path = Path::new(darwin_path).join("projects").join(student);
     if project_path.is_dir() {
-        remove_dir_all(project_path)?;
+        remove_dir_all(&project_path).expect(&format!("Remove dir all {:?} to work", project_path));
     } else if project_path.is_file() {
-        remove_file(project_path)?;
+        remove_file(&project_path).expect(&format!("Remove file {:?} to work", project_path));
     }
 
-    if util::file_contains_line(darwin_path.join("tests_ran").as_path(), test)? {
+    if util::file_contains_line(darwin_path.join("tests_ran").as_path(), test).expect(".darwin/tests_ran should exist and be readable") {
         return Ok(())
     }
 
@@ -33,7 +69,7 @@ pub fn run_test_for_student(darwin_path: &Path, project_path: &Path, student: &s
             // Ensure tests are valid tests
             match process_diff_tests(
                 darwin_path,
-                project_path,
+                project_path.as_path(),
                 student,
                 test,
                 &Path::new(&diff_path),
@@ -64,7 +100,7 @@ fn process_diff_tests(
     // - diff_path exists
     initialize_project(darwin_path, project_path)?;
     set_active_project(darwin_path, project_path, diff_path)?;
-    if let Err(e) = compile(darwin_path) {
+    if let Err(e) = compile(project_path) {
         let compile_error_path = darwin_path.join("results").join("compile_errors");
         let mut compile_error_file = OpenOptions::new().read(true).append(true).open(compile_error_path).unwrap();
 
@@ -78,12 +114,12 @@ fn process_diff_tests(
     return Ok(())
 }
 
-fn compile(darwin_path: &Path) -> Result<(), io::Error> {
+fn compile(project_path: &Path) -> Result<(), io::Error> {
     // Assume the student diff has already been resolved and placed into .darwin/project/src/main
     // mvn compile
 
     let mut compile_command = Command::new("mvn")
-        .current_dir(darwin_path.join("project"))
+        .current_dir(project_path)
         .arg("test-compile")
         .stdin(Stdio::null())
         .stdout(Stdio::null())

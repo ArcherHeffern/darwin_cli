@@ -13,6 +13,7 @@ mod list_tests;
 mod util;
 mod view_student_results;
 mod download_results;
+mod clean;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -40,6 +41,7 @@ enum SubCommand {
     },
     TestAll {
         tests: String,
+        num_threads: Option<usize>
     },
     ViewStudentResultSummary {
         student: String,
@@ -63,6 +65,7 @@ enum SubCommand {
         test: String,
         outfile: String
     },
+    Clean
 }
 
 #[derive(Debug)]
@@ -181,10 +184,11 @@ fn main() {
                 tests.as_str(),
             );
         },
-        SubCommand::TestAll { tests } => {
+        SubCommand::TestAll { tests, num_threads } => {
             commands::run_tests(
                 darwin_path,
-                tests.as_str()
+                tests.as_str(),
+                num_threads.unwrap_or(1)
             )
         }
         SubCommand::ViewStudentResultSummary { student, test } => {
@@ -207,6 +211,9 @@ fn main() {
         }
         SubCommand::ViewStudentSubmission { student } => {
             commands::view_student_submission(darwin_path, student.as_str());
+        }
+        SubCommand::Clean  => {
+            commands::clean(darwin_path);
         }
     }
 }

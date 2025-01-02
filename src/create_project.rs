@@ -13,9 +13,13 @@ pub fn init_darwin(
     skeleton_path: &Path,
     submission_zipfile_path: &Path,
     copy_ignore_set: &HashSet<&str>,
-) -> Result<(), io::Error> {
-    assert!(skeleton_path.is_dir());
-    assert!(submission_zipfile_path.extension().unwrap() == "zip");
+) -> io::Result<()> {
+    if !skeleton_path.is_dir() {
+        return Err(io::Error::new(io::ErrorKind::InvalidInput, "skeleton_path must be a directory"));
+    }
+    if !submission_zipfile_path.extension().is_some_and(|ext|ext=="zip") {
+        return Err(io::Error::new(io::ErrorKind::InvalidInput, "submission_zipfile path is not a zipfile"));
+    }
 
     let stdin = io::stdin();
     let mut stdout = io::stdout();
@@ -44,6 +48,7 @@ pub fn init_darwin(
     fs::create_dir(darwin_path.join("submission_diffs"))?;
     fs::create_dir(darwin_path.join("main"))?;
     fs::create_dir(darwin_path.join("test"))?;
+    fs::create_dir(darwin_path.join("projects"))?;
     fs::create_dir(darwin_path.join("results"))?;
     File::create(darwin_path.join("tests_ran"))?;
     File::create(darwin_path.join("results").join("compile_errors"))?;

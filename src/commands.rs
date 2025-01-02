@@ -1,7 +1,7 @@
 use std::{collections::HashSet, fs::{create_dir, remove_dir, remove_file, File, OpenOptions}, io::{prelude::*, stdin, BufRead}, path::{Path, PathBuf}, process::exit};
 
 use crate::{
-    create_project, download_results, list_students::{self}, list_tests, run_tests::{self}, util::{is_test, patch}, view_student_results::{self, TestResultError}
+    clean, create_project, download_results, list_students::{self}, list_tests, run_tests::{self}, util::{is_test, patch}, view_student_results::{self, TestResultError}
 };
 
 pub fn create_darwin(
@@ -31,7 +31,7 @@ pub fn list_tests(darwin_path: &Path) {
 }
 
 pub fn run_test_for_student(darwin_path: &Path, student: &str, test: &str) {
-    match run_tests::run_test_for_student(darwin_path, darwin_path.join("project").as_path(), student, test) {
+    match run_tests::run_test_for_student(darwin_path.to_path_buf(), student, test) {
         Ok(()) => {},
         Err(e) => {
             eprintln!("{}", e);
@@ -39,27 +39,13 @@ pub fn run_test_for_student(darwin_path: &Path, student: &str, test: &str) {
     }
 }
 
-pub fn run_tests(darwin_path: &Path, test: &str) {
-    if !is_test(darwin_path, test) {
-        eprintln!("Test {} not recognized", test);
-        return;
-    }
-
-    for diff_path in darwin_path.join("submission_diffs").read_dir().expect("Project to be initialized and submission_diffs directory to exist") {
-        let diff_path = diff_path.unwrap();
-        let student = diff_path.file_name().into_string().expect("?");
-        println!("Processing '{}'", student);
-        if let Err(e) = run_tests::run_test_for_student(
-            darwin_path,
-            darwin_path.join("project").as_path(),
-            &student,
-            test,
-        ) {
-            eprintln!("{}", e);
+pub fn run_tests(darwin_path: &Path, test: &str, num_threads: usize) {
+    match run_tests::concurrent_run_tests(darwin_path, test, num_threads) {
+        Ok(()) => {},
+        Err(e) => {
+            eprintln!("Error: {}", e);
         }
     }
-    let mut f = OpenOptions::new().write(true).append(true).open(darwin_path.join("tests_ran")).expect("If project has been initialized, tests_ran must exist");
-    write!(f, "{}\n", test).expect("tests_ran is writable");
 }
 
 pub fn view_student_result(darwin_path: &Path, student: &str, test: &str, summarize: bool) {
@@ -166,4 +152,10 @@ pub fn view_student_submission(darwin_path: &Path, student: &str) {
 
     create_dir(dest).expect(&format!("Can create directory '{}", student));
     patch(darwin_path.join("main").as_path(), student_diff_path.as_path(), dest).unwrap();
+}
+
+pub fn clean(darwin_path: &Path) {
+    if let Err(e) = clean::clean(darwin_path) {
+        eprintln!("Error cleaning: {}", e);
+    }
 }
