@@ -1,7 +1,7 @@
 use std::{
     fs::{remove_dir_all, remove_file, rename, OpenOptions},
     io::{self, prelude::*, Error, ErrorKind, Result},
-    path::{Path, PathBuf},
+    path::Path,
     process::{Command, Stdio},
 };
 use threadpool::ThreadPool;
@@ -138,7 +138,7 @@ fn _run_test_for_student(
         return Err(e);
     }
     run_test(project_path, test)?;
-    relocate_test_results(darwin_path, project_path, student, test)?;
+    relocate_test_results(project_path, test, dest_file)?;
     remove_dir_all(project_path)?;
 
     Ok(())
@@ -180,18 +180,15 @@ fn run_test(project_path: &Path, test: &str) -> Result<()> {
 }
 
 fn relocate_test_results(
-    darwin_path: &Path,
     project_path: &Path,
-    student: &str,
     test: &str,
+    dest_file: &Path
 ) -> Result<()> {
     let results_filename_from = format!("TEST-{}.xml", test);
     let results_file_from = project_path
         .join("target")
         .join("surefire-reports")
         .join(results_filename_from);
-    let results_filename_to = format!("{}_{}", student, test);
-    let results_file_to = darwin_path.join("results").join(results_filename_to);
-    rename(results_file_from, results_file_to).unwrap();
+    rename(results_file_from, dest_file).unwrap();
     Ok(())
 }

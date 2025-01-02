@@ -132,13 +132,13 @@ fn submissions_to_diffs(
 fn submission_to_diff(
     darwin_path: &Path,
     file_name: &str,
-    mut zip: &mut ZipArchive<File>,
+    zip: &mut ZipArchive<File>,
     student_name: &str,
     file_ignore_set: &HashSet<&str>,
 ) -> Result<()> {
     let mut student_submission_file = tempfile()?;
 
-    if let Err(e) = extract_student_submission(&mut zip, file_name, &mut student_submission_file) {
+    if let Err(e) = extract_student_submission(zip, file_name, &mut student_submission_file) {
         return Err(Error::new(
             ErrorKind::Other,
             format!("Error extracting {}'s submission: {}", student_name, e),
@@ -177,7 +177,7 @@ fn extract_student_submission(
     file_name: &str,
     dest: &mut File,
 ) -> Result<()> {
-    let mut file_in_zip = zip.by_name(&file_name)?;
+    let mut file_in_zip = zip.by_name(file_name)?;
     let mut writer = BufWriter::new(dest);
     io::copy(&mut file_in_zip, &mut writer)?;
     writer.flush()?; // Ensure all data is written to the underlying file

@@ -18,8 +18,8 @@ pub fn prompt_yn(prompt: &str) -> Result<bool> {
     stdout.flush()?;
     let mut line = String::new();
     stdin.lock().read_line(&mut line)?;
-    println!("");
-    return Ok(line.as_str() == "y\n");
+    println!();
+    Ok(line.as_str() == "y\n")
 }
 
 pub fn copy_dir_all(
