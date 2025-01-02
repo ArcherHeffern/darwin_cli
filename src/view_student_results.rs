@@ -2,7 +2,7 @@ use std::{fs::OpenOptions, io::{self, BufReader}, path::Path, str::FromStr, time
 
 use xml::{name::OwnedName, attribute::OwnedAttribute, reader::XmlEvent, EventReader};
 
-use crate::{util::file_contains_line, StatusMsg, TestResult, TestResults};
+use crate::{list_students::list_students, list_tests::list_tests, util::file_contains_line, StatusMsg, TestResult, TestResults};
 
 #[derive(Debug)]
 pub enum TestResultError {
@@ -12,19 +12,45 @@ pub enum TestResultError {
 }
 
 pub fn parse_test_results(darwin_path: &Path, student: &str, test: &str) -> Result<TestResults, TestResultError> {
-    let mut test_results = TestResults { student: student.to_string(), test: test.to_string(), results: Vec::new() };
+    if !list_students(darwin_path).iter().any(|s| s==student) {
+        return Err(TestResultError::IOError(io::Error::new(io::ErrorKind::NotFound, format!("Student {} not recognized", student))));
+    }
+
+    if !list_tests(darwin_path).contains(test) {
+        return Err(TestResultError::IOError(io::Error::new(io::ErrorKind::NotFound, format!("Test {} not recognized", test))));
+    }
+
+    _parse_test_results(darwin_path, student, test)
+}
+
+fn _parse_test_results(darwin_path: &Path, student: &str, test: &str) -> Result<TestResults, TestResultError> {
     let compile_error_path = Path::new(darwin_path).join("results").join("compile_errors");
 
     if file_contains_line(&compile_error_path, student).unwrap() {
         return Err(TestResultError::CompilationError);
     }
 
-    let test_results_file_path = Path::new(darwin_path).join("results").join(format!("{}_{}", student, test));
-    if !test_results_file_path.is_file() {
+    let report_path = Path::new(darwin_path).join("results").join(format!("{}_{}", student, test));
+    if !report_path.is_file() {
         return Err(TestResultError::TestsNotRun);
     }
 
-    let test_results_file = OpenOptions::new().read(true).open(test_results_file_path).unwrap();
+    parse_surefire_report(&report_path, student, test)
+}
+
+fn get_attr(owned_attributes: &[OwnedAttribute], attr: &str) -> Option<String> {
+    owned_attributes.iter().find_map(|a| {
+        if a.name==OwnedName::from_str(attr).unwrap() {
+            return Some(a.value.clone());
+        } 
+        None
+    })
+}
+
+fn parse_surefire_report(report_path: &Path, student: &str, test: &str) -> Result<TestResults, TestResultError> {
+    let mut test_results = TestResults { student: student.to_string(), test: test.to_string(), results: Vec::new() };
+
+    let test_results_file = OpenOptions::new().read(true).open(report_path).unwrap();
     let test_results_file = BufReader::new(test_results_file);
 
     let parser = EventReader::new(test_results_file);
@@ -65,21 +91,12 @@ pub fn parse_test_results(darwin_path: &Path, student: &str, test: &str) -> Resu
                 time = Duration::new(0, 0);
             }
             Err(e) => {
-                eprintln!("Error: {e}");
-                return Err(TestResultError::IOError(io::Error::new(io::ErrorKind::Other, format!("Failed to parse {}'s {} test results", student, test))));
+                return Err(TestResultError::IOError(io::Error::new(io::ErrorKind::Other, format!("Failed to parse {}'s {} test results: {}", student, test, e))));
             }
             _ => {}
         }
+
     }
-
     Ok(test_results)
-}
 
-fn get_attr(owned_attributes: &[OwnedAttribute], attr: &str) -> Option<String> {
-    owned_attributes.iter().find_map(|a| {
-        if a.name==OwnedName::from_str(attr).unwrap() {
-            return Some(a.value.clone());
-        } 
-        None
-    })
 }

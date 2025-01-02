@@ -1,4 +1,7 @@
 __Current__
+- Create darwin remove print statements and whatnot. 
+- CQS: command handler (Printing) -> validation -> core logic
+- Operations that modify state (commands) should be separate from those that retrieve state (queries)
 - Parsing of result files
   - What if is run multiple times and fails 3/5? 
   - Can we actually parse the result files? 

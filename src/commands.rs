@@ -1,7 +1,7 @@
 use std::{collections::HashSet, fs::{create_dir, remove_dir, remove_file, OpenOptions}, io::{stdin, BufRead}, path::Path, process::exit};
 
 use crate::{
-    clean, create_project, download_results, list_students::{self}, list_tests, run_tests::{self}, util::patch, view_student_results::{self, TestResultError}
+    clean, create_darwin, download_results, list_students::{self}, list_tests, run_tests::{self}, util::{patch, prompt_yn}, view_student_results::{self, TestResultError}
 };
 
 pub fn create_darwin(
@@ -10,14 +10,21 @@ pub fn create_darwin(
     moodle_submissions_zipfile: &Path,
     copy_ignore_set: &HashSet<&str>,
 ) {
-    create_project::init_darwin(
-        darwin_path,
-        project_skeleton,
-        moodle_submissions_zipfile,
-        copy_ignore_set,
-    )
-    .unwrap();
+    if darwin_path.exists() {
+        if prompt_yn("Darwin project already exists in this directory. Override? (y/n)").unwrap_or(false) {
+            return;
+        }
+        if remove_dir(darwin_path).is_err() {
+            eprintln!("Failed to delete darwin project");
+            return;
+            
+        }
+    }
+    if let Err(e) = create_darwin::create_darwin(darwin_path, project_skeleton, moodle_submissions_zipfile, copy_ignore_set) {
+        eprintln!("Error while creating darwin project: {}", e);
+    }
 }
+
 pub fn list_students(darwin_path: &Path) {
     for student in list_students::list_students(darwin_path) {
         println!("{}", student);
@@ -31,7 +38,7 @@ pub fn list_tests(darwin_path: &Path) {
 }
 
 pub fn run_test_for_student(darwin_path: &Path, student: &str, test: &str) {
-    match run_tests::run_test_for_student(darwin_path.to_path_buf(), student, test) {
+    match run_tests::run_test_for_student(darwin_path, student, test) {
         Ok(()) => {},
         Err(e) => {
             eprintln!("{}", e);
@@ -40,7 +47,14 @@ pub fn run_test_for_student(darwin_path: &Path, student: &str, test: &str) {
 }
 
 pub fn run_tests(darwin_path: &Path, test: &str, num_threads: usize) {
-    match run_tests::concurrent_run_tests(darwin_path, test, num_threads) {
+    match run_tests::concurrent_run_tests(
+        darwin_path, 
+        test, 
+        num_threads,
+        |s| {println!("Processing: {}", s)},
+        |s, e| {eprintln!("Error processing {}: {}", s, e)},
+        |_|{}
+    ) {
         Ok(()) => {},
         Err(e) => {
             eprintln!("Error: {}", e);
@@ -49,16 +63,6 @@ pub fn run_tests(darwin_path: &Path, test: &str, num_threads: usize) {
 }
 
 pub fn view_student_result(darwin_path: &Path, student: &str, test: &str, summarize: bool) {
-    if !list_students::list_students(darwin_path).iter().any(|s| s==student) {
-        eprintln!("Student '{}' not recognized", student);
-        return;
-    }
-
-    if !list_tests::list_tests(darwin_path).contains(test) {
-        eprintln!("Test '{}' not recognized", test);
-        return;
-    }
-
     match view_student_results::parse_test_results(darwin_path, student, test) {
         Ok(result) => {
             if summarize {

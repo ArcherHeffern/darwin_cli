@@ -6,7 +6,7 @@ use std::time::Duration;
 use std::{collections::HashSet, fs};
 
 mod commands;
-mod create_project;
+mod create_darwin;
 mod run_tests;
 mod list_students;
 mod list_tests;

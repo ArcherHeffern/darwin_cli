@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 use std::fs::{self, create_dir, create_dir_all};
-use std::io::{copy, prelude::*, BufReader, BufWriter, Result};
+use std::io::{copy, prelude::*, BufReader, BufWriter, Error, Result};
 use std::os::unix::fs::symlink;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
@@ -10,6 +10,17 @@ use zip::result::ZipError;
 use zip::ZipArchive;
 
 use crate::{list_students, list_tests};
+
+pub fn prompt_yn(prompt: &str) -> Result<bool> {
+    let stdin = io::stdin();
+    let mut stdout = io::stdout();
+    print!("{}", prompt);
+    stdout.flush()?;
+    let mut line = String::new();
+    stdin.lock().read_line(&mut line)?;
+    println!("");
+    return Ok(line.as_str() == "y\n");
+}
 
 pub fn copy_dir_all(
     src: impl AsRef<Path>,
@@ -102,14 +113,37 @@ pub fn extract_directory_from_zip(
     Ok(())
 }
 
+pub fn to_diff_path(darwin_path: &Path, student_name: &str) -> PathBuf {
+    darwin_path.join("submission_diffs").join(student_name)
+}
 
-pub fn find_student_diff_file(darwin_path: &Path, student_name: &str) -> Option<PathBuf> {
-    let diff_path = darwin_path.join("submission_diffs").join(student_name);
-    if diff_path.is_file() {
-        return Some(diff_path);
+pub fn create_diff(original: &Path, deviant: &Path, dest_path: &Path) -> Result<()> {
+    // Truncates dest_path if it exists
+
+    if !original.exists() {
+        return Err(Error::new(io::ErrorKind::NotFound, format!("Cannot create diff with non existing original path {:?} ", original)));
     }
+    if !deviant.exists() {
+        return Err(Error::new(io::ErrorKind::NotFound, format!("Cannot create diff with non existing deviant path {:?} ", original)));
+    }
+    _create_diff(original, deviant, dest_path)
+}
 
-    None
+fn _create_diff(original: &Path, deviant: &Path, dest_path: &Path) -> Result<()> {
+    let output = Command::new("diff")
+        .arg("-ruN")
+        .arg(original)
+        .arg(deviant)
+        .stdout(Stdio::piped())
+        .spawn()?;
+
+    let diff_file = File::create(dest_path)?;
+    let mut stdout_writer = BufWriter::new(diff_file);
+    let mut stdout = output.stdout.unwrap();
+    copy(&mut stdout, &mut stdout_writer)?;
+    stdout_writer.flush()?;
+
+    Ok(())
 }
 
 pub fn is_test(darwin_path: &Path, test: &str) -> bool {
