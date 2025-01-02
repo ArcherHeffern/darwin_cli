@@ -6,5 +6,5 @@ pub fn list_students(darwin_path: &Path) -> Vec<String> {
         students.push(entry.unwrap().file_name().to_str().unwrap().to_string());
     }
     students.sort();
-    return students;
+    students
 }

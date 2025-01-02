@@ -60,12 +60,12 @@ pub fn init_darwin(
     util::copy_dir_all(
         skeleton_path.join("src").join("main"),
         darwin_path.join("main"),
-        &copy_ignore_set,
+        copy_ignore_set,
     )?;
     util::copy_dir_all(
         skeleton_path.join("src").join("test"),
         darwin_path.join("test"),
-        &copy_ignore_set,
+        copy_ignore_set,
     )?;
 
     submission_to_diffs(darwin_path, submission_zipfile_path, &copy_ignore_set)?;
@@ -114,7 +114,7 @@ fn submission_to_diffs(
             continue;
         }
 
-        if let Err(e) = extract_student_pom(&mut student_project_zip, &src_main_dir.path()) {
+        if let Err(e) = extract_student_pom(&mut student_project_zip, src_main_dir.path()) {
             println!("Error extracting {}'s pom.xml: {}", &student_name, e);
             continue;
         }

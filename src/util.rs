@@ -66,7 +66,7 @@ pub fn extract_directory_from_zip(
 
         // Check if the file is in the specified directory
         let index_of_dir_name = file_name.find(dir_name);
-        if index_of_dir_name == None
+        if index_of_dir_name.is_none()
             || ignore_substrings
                 .iter()
                 .any(|ignore| file_name.contains(ignore))

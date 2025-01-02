@@ -30,7 +30,7 @@ pub fn concurrent_run_tests(darwin_path: &Path, test: &str, num_threads: usize) 
         })
     }
     threadpool.join();
-    let mut f = OpenOptions::new().write(true).append(true).open(darwin_path.join("tests_ran"))?;
+    let mut f = OpenOptions::new().append(true).open(darwin_path.join("tests_ran"))?;
     write!(f, "{}\n", test)?;
     Ok(())
 }
@@ -72,7 +72,7 @@ pub fn run_test_for_student(darwin_path: PathBuf, student: &str, test: &str) -> 
                 project_path.as_path(),
                 student,
                 test,
-                &Path::new(&diff_path),
+                Path::new(&diff_path),
             ) {
                 Err(e) => Err(e),
                 Ok(()) => Ok(())

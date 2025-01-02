@@ -75,7 +75,7 @@ pub fn parse_test_results(darwin_path: &Path, student: &str, test: &str) -> Resu
     Ok(test_results)
 }
 
-fn get_attr(owned_attributes: &Vec<OwnedAttribute>, attr: &str) -> Option<String> {
+fn get_attr(owned_attributes: &[OwnedAttribute], attr: &str) -> Option<String> {
     owned_attributes.iter().find_map(|a| {
         if a.name==OwnedName::from_str(attr).unwrap() {
             return Some(a.value.clone());
