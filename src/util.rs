@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 use std::fs::{self, create_dir, create_dir_all};
-use std::io::{copy, prelude::*, BufReader, BufWriter, Error, Result};
+use std::io::{copy, prelude::*, BufReader, BufWriter, Error, ErrorKind, Result};
 use std::os::unix::fs::symlink;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
@@ -235,15 +235,13 @@ pub fn patch(patch_path: &Path, diff_path: &Path, dest_path: &Path) -> Result<()
             copy(&mut patch_reader, &mut stdin_writer)?;
         }
         None => {
-            eprintln!("Cannot access stdin of patch process {}", output.id());
+            return Err(Error::new(ErrorKind::BrokenPipe, format!("Cannot access stdin of patch process {}", output.id())));
         }
     }
 
-    let status = output.wait()?;
-    if !status.success() {
-        eprintln!("Patch command failed with status: {}", status);
+    if output.wait().is_err() {
+        return Err(Error::new(ErrorKind::Other, "Failed to wait for patch process"));
     }
-
     Ok(())
 }
 

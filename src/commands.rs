@@ -1,6 +1,6 @@
 use std::{
     collections::HashSet,
-    fs::{create_dir, remove_dir, remove_file, OpenOptions},
+    fs::{remove_dir, remove_file, OpenOptions},
     io::{stdin, BufRead},
     path::Path,
     process::exit,
@@ -11,8 +11,8 @@ use crate::{
     list_students::{self},
     list_tests,
     run_tests::{self},
-    util::{patch, prompt_yn},
-    view_student_results::{self, TestResultError},
+    util::prompt_yn,
+    view_student_results::{self, TestResultError}, view_student_submission,
 };
 
 pub fn create_darwin(
@@ -135,8 +135,8 @@ pub fn download_results_summary(darwin_path: &Path, test: &str, outfile: &str) {
     download_results::download_results_summary(darwin_path, out_file, test).unwrap();
 }
 pub fn download_results_by_classname(darwin_path: &Path, test: &str, outfile: &str) {
-    let out_file_path = Path::new(outfile);
-    if out_file_path.exists() {
+    let out_file = Path::new(outfile);
+    if out_file.exists() {
         println!("{} Exists. Continue? (Y/N)", outfile);
         let mut s = String::new();
         stdin().lock().read_line(&mut s).expect("Stdin to work");
@@ -145,31 +145,11 @@ pub fn download_results_by_classname(darwin_path: &Path, test: &str, outfile: &s
             exit(0);
         }
     }
-    let out_file = OpenOptions::new()
-        .write(true)
-        .truncate(true)
-        .create(true)
-        .open(out_file_path)
-        .unwrap();
     download_results::download_results_by_classname(darwin_path, out_file, test).unwrap();
 }
 
 pub fn view_student_submission(darwin_path: &Path, student: &str) {
-    if !list_students::list_students(darwin_path)
-        .iter()
-        .any(|s| s == student)
-    {
-        eprintln!("Student '{}' does not exist\n", student);
-        exit(1);
-    }
-    let student_diff_path = darwin_path.join("submission_diffs").join(student);
-    if !student_diff_path.is_file() {
-        eprintln!(
-            "Student diff '{}' does not exist or is not a file",
-            student_diff_path.to_string_lossy()
-        );
-        exit(1);
-    }
+
     let dest = Path::new(student);
     if dest.exists() {
         println!("'{}' Exists. Continue? (Y/N)", student);
@@ -180,19 +160,17 @@ pub fn view_student_submission(darwin_path: &Path, student: &str) {
             exit(0);
         }
     }
-    if dest.is_file() {
-        remove_file(dest).expect(&format!("Can remove file '{}'", student));
-    } else if dest.is_dir() {
-        remove_dir(dest).expect(&format!("Can remove directory '{}'", student));
+    if dest.is_file() && remove_file(dest).is_err() {
+        eprintln!("Failed to remove {:?}", dest);
+        return;
+    } else if dest.is_dir() && remove_dir(dest).is_err() {
+        eprintln!("Failed to remove {:?}", dest);
+        return;
     }
 
-    create_dir(dest).expect(&format!("Can create directory '{}", student));
-    patch(
-        darwin_path.join("main").as_path(),
-        student_diff_path.as_path(),
-        dest,
-    )
-    .unwrap();
+    if let Err(e) = view_student_submission::view_student_submission(darwin_path, student, dest) {
+        eprintln!("Error viewing student submission: {}", e);
+    };
 }
 
 pub fn clean(darwin_path: &Path) {

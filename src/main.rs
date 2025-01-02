@@ -13,6 +13,7 @@ mod list_tests;
 mod util;
 mod view_student_results;
 mod download_results;
+mod view_student_submission;
 mod clean;
 
 #[derive(Parser, Debug)]

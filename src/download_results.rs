@@ -1,4 +1,4 @@
-use std::{error::Error, fs::File, io::BufWriter, path::Path};
+use std::{fs::{File, OpenOptions}, io::{BufWriter, Result}, path::Path};
 
 use crate::{
     list_students::list_students, list_tests::list_tests, view_student_results::parse_test_results,
@@ -8,7 +8,7 @@ pub fn download_results_summary(
     darwin_path: &Path,
     f: File,
     test: &str,
-) -> Result<(), Box<dyn Error>> {
+) -> Result<()> {
     let f = BufWriter::new(f);
     let mut wtr = csv::Writer::from_writer(f);
     let headers = vec![
@@ -49,11 +49,16 @@ pub fn download_results_summary(
 
 pub fn download_results_by_classname(
     darwin_path: &Path,
-    f: File,
+    out_file: &Path,
     test: &str,
-) -> Result<(), Box<dyn Error>> {
-    let f = BufWriter::new(f);
-    let mut wtr = csv::Writer::from_writer(f);
+) -> Result<()> {
+    let out_file = OpenOptions::new()
+        .write(true)
+        .truncate(true)
+        .create(true)
+        .open(out_file)?;
+    let out_file = BufWriter::new(out_file);
+    let mut wtr = csv::Writer::from_writer(out_file);
     let tests = list_tests(darwin_path);
     let mut headers = vec![String::from("Name"), String::from("Error")];
     for test in tests {
