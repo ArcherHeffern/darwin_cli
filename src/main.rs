@@ -5,15 +5,15 @@ use std::path::Path;
 use std::time::Duration;
 use std::{collections::HashSet, fs};
 
+mod clean;
 mod commands;
 mod create_darwin;
-mod run_tests;
+mod download_results;
 mod list_students;
 mod list_tests;
+mod run_tests;
 mod util;
 mod view_student_results;
-mod download_results;
-mod clean;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -41,7 +41,7 @@ enum SubCommand {
     },
     TestAll {
         tests: String,
-        num_threads: Option<usize>
+        num_threads: Option<usize>,
     },
     ViewStudentResultSummary {
         student: String,
@@ -49,43 +49,58 @@ enum SubCommand {
     },
     ViewStudentResultByClassName {
         student: String,
-        test: String
+        test: String,
     },
     ViewAllStudentsResultsSummary {
-        test: String
+        test: String,
     },
     ViewAllStudentsResultsByClassName {
-        test: String
+        test: String,
     },
     DownloadResultsSummary {
         test: String,
-        outfile: String
+        outfile: String,
     },
     DownloadResultsByClassName {
         test: String,
-        outfile: String
+        outfile: String,
     },
-    Clean
+    Clean,
 }
 
 #[derive(Debug)]
 struct TestResults {
     student: String,
     test: String,
-    results: Vec<TestResult>
+    results: Vec<TestResult>,
 }
 
 impl TestResults {
     fn summary(&self) -> (usize, usize, usize) {
         // Correct, errored, failed
-        let num_correct = self.results.iter().filter(|r|r.msg == StatusMsg::None).count();
-        let num_errored = self.results.iter().filter(|r|matches!(r.msg, StatusMsg::Error {..})).count();
-        let num_failed = self.results.iter().filter(|r|matches!(r.msg, StatusMsg::Failure{..})).count();
+        let num_correct = self
+            .results
+            .iter()
+            .filter(|r| r.msg == StatusMsg::None)
+            .count();
+        let num_errored = self
+            .results
+            .iter()
+            .filter(|r| matches!(r.msg, StatusMsg::Error { .. }))
+            .count();
+        let num_failed = self
+            .results
+            .iter()
+            .filter(|r| matches!(r.msg, StatusMsg::Failure { .. }))
+            .count();
         (num_correct, num_errored, num_failed)
     }
     fn summarize(&self) -> String {
         let summary = self.summary();
-        format!("{}_{}: Correct: {}, Errored: {}, Failed: {}", self.student, self.test, summary.0, summary.1, summary.2)
+        format!(
+            "{}_{}: Correct: {}, Errored: {}, Failed: {}",
+            self.student, self.test, summary.0, summary.1, summary.2
+        )
     }
 
     fn summarize_by_classname(&self) -> HashMap<String, (i32, i32, i32)> {
@@ -97,14 +112,14 @@ impl TestResults {
             let index = match &result.msg {
                 StatusMsg::None => 0,
                 StatusMsg::Error { .. } => 1,
-                StatusMsg::Failure { .. } => 2
+                StatusMsg::Failure { .. } => 2,
             };
             if let Some(entry) = m.get_mut(&result.classname) {
                 match index {
                     0 => entry.0 += 1,
                     1 => entry.1 += 1,
                     2 => entry.2 += 1,
-                    _ => {}  // In case of an unexpected index, do nothing
+                    _ => {} // In case of an unexpected index, do nothing
                 }
             }
         }
@@ -113,7 +128,7 @@ impl TestResults {
 
     fn print(&self) -> String {
         let m = self.summarize_by_classname();
-        format!("{}_{} {:?}",self.student, self.test, m)
+        format!("{}_{} {:?}", self.student, self.test, m)
     }
 }
 
@@ -125,19 +140,17 @@ struct TestResult {
     msg: StatusMsg,
 }
 
-
-#[derive(Debug)]
-#[derive(PartialEq)]
+#[derive(Debug, PartialEq)]
 enum StatusMsg {
     None,
     Failure {
         message: Option<String>,
-        type_: String, 
+        type_: String,
     },
     Error {
         message: Option<String>,
-        type_: String
-    }
+        type_: String,
+    },
 }
 
 fn main() {
@@ -178,18 +191,10 @@ fn main() {
             commands::list_students(darwin_path);
         }
         SubCommand::TestStudent { student, tests } => {
-            commands::run_test_for_student(
-                darwin_path,
-                student.as_str(),
-                tests.as_str(),
-            );
-        },
+            commands::run_test_for_student(darwin_path, student.as_str(), tests.as_str());
+        }
         SubCommand::TestAll { tests, num_threads } => {
-            commands::run_tests(
-                darwin_path,
-                tests.as_str(),
-                num_threads.unwrap_or(1)
-            )
+            commands::run_tests(darwin_path, tests.as_str(), num_threads.unwrap_or(1))
         }
         SubCommand::ViewStudentResultSummary { student, test } => {
             commands::view_student_result(darwin_path, &student, &test, true);
@@ -212,7 +217,7 @@ fn main() {
         SubCommand::ViewStudentSubmission { student } => {
             commands::view_student_submission(darwin_path, student.as_str());
         }
-        SubCommand::Clean  => {
+        SubCommand::Clean => {
             commands::clean(darwin_path);
         }
     }

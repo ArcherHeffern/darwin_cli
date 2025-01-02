@@ -14,18 +14,33 @@ pub fn create_darwin(
     copy_ignore_set: &HashSet<&str>,
 ) -> Result<()> {
     if darwin_path.exists() {
-        return Err(Error::new(ErrorKind::AlreadyExists, "darwin project already exists in this directory"));
+        return Err(Error::new(
+            ErrorKind::AlreadyExists,
+            "darwin project already exists in this directory",
+        ));
     }
     if !project_skeleton.is_dir() {
-        return Err(Error::new(ErrorKind::InvalidInput, "skeleton_path must be a directory"));
+        return Err(Error::new(
+            ErrorKind::InvalidInput,
+            "skeleton_path must be a directory",
+        ));
     }
     if !moodle_submissions_zipfile.is_file() {
-        return Err(Error::new(ErrorKind::InvalidInput, "moodle_submissions_zipfile path is not a zipfile"))
+        return Err(Error::new(
+            ErrorKind::InvalidInput,
+            "moodle_submissions_zipfile path is not a zipfile",
+        ));
     }
-    if !moodle_submissions_zipfile.extension().map_or(true, |ext|ext=="zip") {
-        return Err(Error::new(ErrorKind::InvalidInput, "moodle_submissions_zipfile path is not a zipfile"));
+    if !moodle_submissions_zipfile
+        .extension()
+        .map_or(true, |ext| ext == "zip")
+    {
+        return Err(Error::new(
+            ErrorKind::InvalidInput,
+            "moodle_submissions_zipfile path is not a zipfile",
+        ));
     }
-    
+
     let status = _create_darwin(
         darwin_path,
         project_skeleton,
@@ -70,7 +85,12 @@ fn _create_darwin(
         copy_ignore_set,
     )?;
 
-    submissions_to_diffs(darwin_path, submission_zipfile_path, copy_ignore_set, |s, e| {eprintln!("Error extracting {}'s submission: {}", s, e)})?;
+    submissions_to_diffs(
+        darwin_path,
+        submission_zipfile_path,
+        copy_ignore_set,
+        |s, e| eprintln!("Error extracting {}'s submission: {}", s, e),
+    )?;
 
     Ok(())
 }
@@ -79,20 +99,29 @@ fn submissions_to_diffs(
     darwin_path: &Path,
     submission_zipfile_path: &Path,
     file_ignore_set: &HashSet<&str>,
-    on_submission_extraction_error: fn(&str, Error) // Student name
+    on_submission_extraction_error: fn(&str, Error), // Student name
 ) -> Result<()> {
     let zip = File::open(submission_zipfile_path)?;
     let mut zip = ZipArchive::new(zip)?;
 
     let file_names: Vec<String> = zip.file_names().map(String::from).collect();
     for file_name in file_names {
-        if Path::new(&file_name).extension().map_or(true, |x| x != "zip") {
+        if Path::new(&file_name)
+            .extension()
+            .map_or(true, |x| x != "zip")
+        {
             continue;
         }
 
         let student_name = &file_name[0..file_name.find('_').expect("Moodle submission zipfile must delimit all contained student submission zipfiles with '_'. Perhaps moodle changed its naming scheme or this isn't a moodle submission zipfile.")];
 
-        if let Err(e) = submission_to_diff(darwin_path, &file_name, &mut zip, student_name, file_ignore_set) {
+        if let Err(e) = submission_to_diff(
+            darwin_path,
+            &file_name,
+            &mut zip,
+            student_name,
+            file_ignore_set,
+        ) {
             on_submission_extraction_error(student_name, e);
         }
     }
@@ -100,38 +129,53 @@ fn submissions_to_diffs(
     Ok(())
 }
 
-fn submission_to_diff(darwin_path: &Path, file_name: &str, mut zip: &mut ZipArchive<File>, student_name: &str, file_ignore_set: &HashSet<&str>) -> Result<()> {
-        let mut student_submission_file = tempfile()?;
+fn submission_to_diff(
+    darwin_path: &Path,
+    file_name: &str,
+    mut zip: &mut ZipArchive<File>,
+    student_name: &str,
+    file_ignore_set: &HashSet<&str>,
+) -> Result<()> {
+    let mut student_submission_file = tempfile()?;
 
-        if let Err(e) = extract_student_submission(&mut zip, file_name, &mut student_submission_file) {
-            return Err(Error::new(ErrorKind::Other, format!("Error extracting {}'s submission: {}", student_name, e)));
-        }
+    if let Err(e) = extract_student_submission(&mut zip, file_name, &mut student_submission_file) {
+        return Err(Error::new(
+            ErrorKind::Other,
+            format!("Error extracting {}'s submission: {}", student_name, e),
+        ));
+    }
 
-        let mut student_project_zip = ZipArchive::new(student_submission_file)?;
+    let mut student_project_zip = ZipArchive::new(student_submission_file)?;
 
-        let src_main_dir = tempdir()?;
-        if let Err(e) = extract_student_src_main(
-            &mut student_project_zip,
-            src_main_dir.path(),
-            file_ignore_set,
-        ) {
-            return Err(Error::new(ErrorKind::Other, format!("Error extracting {}'s submission: {}", student_name, e)));
-        }
+    let src_main_dir = tempdir()?;
+    if let Err(e) = extract_student_src_main(
+        &mut student_project_zip,
+        src_main_dir.path(),
+        file_ignore_set,
+    ) {
+        return Err(Error::new(
+            ErrorKind::Other,
+            format!("Error extracting {}'s submission: {}", student_name, e),
+        ));
+    }
 
-        if let Err(e) = extract_student_pom(&mut student_project_zip, src_main_dir.path()) {
-            return Err(Error::new(ErrorKind::Other, format!("Error extracting {}'s pom.xml: {}", &student_name, e)));
-        }
+    if let Err(e) = extract_student_pom(&mut student_project_zip, src_main_dir.path()) {
+        return Err(Error::new(
+            ErrorKind::Other,
+            format!("Error extracting {}'s pom.xml: {}", &student_name, e),
+        ));
+    }
 
-        let original = darwin_path.join("main");
-        let deviant = src_main_dir.path();
-        let dest_path = darwin_path.join("submission_diffs").join(student_name);
-        create_diff(original.as_path(), deviant, dest_path.as_path())
+    let original = darwin_path.join("main");
+    let deviant = src_main_dir.path();
+    let dest_path = darwin_path.join("submission_diffs").join(student_name);
+    create_diff(original.as_path(), deviant, dest_path.as_path())
 }
 
 fn extract_student_submission(
     zip: &mut ZipArchive<File>,
     file_name: &str,
-    dest: &mut File, 
+    dest: &mut File,
 ) -> Result<()> {
     let mut file_in_zip = zip.by_name(&file_name)?;
     let mut writer = BufWriter::new(dest);

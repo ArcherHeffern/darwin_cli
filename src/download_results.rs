@@ -1,11 +1,23 @@
 use std::{error::Error, fs::File, io::BufWriter, path::Path};
 
-use crate::{list_students::list_students, list_tests::list_tests, view_student_results::parse_test_results};
+use crate::{
+    list_students::list_students, list_tests::list_tests, view_student_results::parse_test_results,
+};
 
-pub fn download_results_summary(darwin_path: &Path, f: File, test: &str) -> Result<(), Box<dyn Error>> {
+pub fn download_results_summary(
+    darwin_path: &Path,
+    f: File,
+    test: &str,
+) -> Result<(), Box<dyn Error>> {
     let f = BufWriter::new(f);
     let mut wtr = csv::Writer::from_writer(f);
-    let headers = vec![String::from("Name"), String::from("Error"), String::from("Correct"), String::from("Errored"), String::from("Failed")];
+    let headers = vec![
+        String::from("Name"),
+        String::from("Error"),
+        String::from("Correct"),
+        String::from("Errored"),
+        String::from("Failed"),
+    ];
 
     wtr.write_record(&headers)?;
     for student in list_students(darwin_path) {
@@ -20,9 +32,7 @@ pub fn download_results_summary(darwin_path: &Path, f: File, test: &str) -> Resu
             }
             Err(e) => {
                 cur_row[1] = match e {
-                    crate::view_student_results::TestResultError::IOError(er) => {
-                        er.to_string()
-                    }
+                    crate::view_student_results::TestResultError::IOError(er) => er.to_string(),
                     crate::view_student_results::TestResultError::TestsNotRun => {
                         String::from("Tests not run")
                     }
@@ -37,7 +47,11 @@ pub fn download_results_summary(darwin_path: &Path, f: File, test: &str) -> Resu
     Ok(())
 }
 
-pub fn download_results_by_classname(darwin_path: &Path, f: File, test: &str) -> Result<(), Box<dyn Error>> {
+pub fn download_results_by_classname(
+    darwin_path: &Path,
+    f: File,
+    test: &str,
+) -> Result<(), Box<dyn Error>> {
     let f = BufWriter::new(f);
     let mut wtr = csv::Writer::from_writer(f);
     let tests = list_tests(darwin_path);
@@ -62,9 +76,7 @@ pub fn download_results_by_classname(darwin_path: &Path, f: File, test: &str) ->
             }
             Err(e) => {
                 cur_row[1] = match e {
-                    crate::view_student_results::TestResultError::IOError(er) => {
-                        er.to_string()
-                    }
+                    crate::view_student_results::TestResultError::IOError(er) => er.to_string(),
                     crate::view_student_results::TestResultError::TestsNotRun => {
                         String::from("Tests not run")
                     }

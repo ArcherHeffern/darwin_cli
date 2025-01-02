@@ -121,10 +121,22 @@ pub fn create_diff(original: &Path, deviant: &Path, dest_path: &Path) -> Result<
     // Truncates dest_path if it exists
 
     if !original.exists() {
-        return Err(Error::new(io::ErrorKind::NotFound, format!("Cannot create diff with non existing original path {:?} ", original)));
+        return Err(Error::new(
+            io::ErrorKind::NotFound,
+            format!(
+                "Cannot create diff with non existing original path {:?} ",
+                original
+            ),
+        ));
     }
     if !deviant.exists() {
-        return Err(Error::new(io::ErrorKind::NotFound, format!("Cannot create diff with non existing deviant path {:?} ", original)));
+        return Err(Error::new(
+            io::ErrorKind::NotFound,
+            format!(
+                "Cannot create diff with non existing deviant path {:?} ",
+                original
+            ),
+        ));
     }
     _create_diff(original, deviant, dest_path)
 }
@@ -152,44 +164,49 @@ pub fn is_test(darwin_path: &Path, test: &str) -> bool {
 }
 
 pub fn is_student(darwin_path: &Path, student: &str) -> bool {
-    list_students::list_students(darwin_path).iter().any(|s|s==student)
+    list_students::list_students(darwin_path)
+        .iter()
+        .any(|s| s == student)
 }
 
 pub fn initialize_project(darwin_path: &Path, project_path: &Path) -> Result<()> {
-    // Invariants: 
+    // Invariants:
     // - darwin_path is an existing .darwin project root directory
     // - project_path does not exist
-    assert!( darwin_path.is_dir());
-    assert!( !project_path.exists());
+    assert!(darwin_path.is_dir());
+    assert!(!project_path.exists());
 
     create_dir_all(project_path)?;
     create_dir(project_path.join("src"))?;
-    copy_dir_all(darwin_path.join("main"), project_path.join("src").join("main"), &HashSet::new())?;
-    symlink(darwin_path.join("test").canonicalize()?, project_path.join("src").join("test"))?;
+    copy_dir_all(
+        darwin_path.join("main"),
+        project_path.join("src").join("main"),
+        &HashSet::new(),
+    )?;
+    symlink(
+        darwin_path.join("test").canonicalize()?,
+        project_path.join("src").join("test"),
+    )?;
 
     Ok(())
-
 }
 
-pub fn set_active_project(
-    darwin_path: &Path,
-    project_path: &Path,
-    diff_path: &Path,
-) -> Result<()> {
-    // Invariants: 
+pub fn set_active_project(darwin_path: &Path, project_path: &Path, diff_path: &Path) -> Result<()> {
+    // Invariants:
     // - darwin_path is an existing .darwin project root directory
     // - project_path is an existing, newly initialized project directory
     assert!(darwin_path.is_dir());
     assert!(project_path.is_dir());
 
     let project_main_path = project_path.join("src").join("main");
-    patch(darwin_path.join("main").as_path(), diff_path, project_main_path.as_path())?;
+    patch(
+        darwin_path.join("main").as_path(),
+        diff_path,
+        project_main_path.as_path(),
+    )?;
 
     fs::rename(
-        project_path
-            .join("src")
-            .join("main")
-            .join("pom.xml"),
+        project_path.join("src").join("main").join("pom.xml"),
         project_path.join("pom.xml"),
     )?;
 
@@ -200,12 +217,7 @@ pub fn patch(patch_path: &Path, diff_path: &Path, dest_path: &Path) -> Result<()
     // patch_path: Directory containing original files
     // diff_path: Diff to be patched into patch_path
     // Destination path
-    copy_dir_all(
-        patch_path,
-        dest_path,
-        &HashSet::new()
-    )
-    .unwrap();
+    copy_dir_all(patch_path, dest_path, &HashSet::new()).unwrap();
 
     let mut output = Command::new("patch")
         .arg("-d")
@@ -233,7 +245,6 @@ pub fn patch(patch_path: &Path, diff_path: &Path, dest_path: &Path) -> Result<()
     }
 
     Ok(())
-
 }
 
 pub fn file_contains_line(file: &Path, line: &str) -> Result<bool> {
@@ -247,7 +258,7 @@ pub fn file_contains_line(file: &Path, line: &str) -> Result<bool> {
                 return Ok(false);
             }
             Ok(_) => {
-                if line == &cur_line[0..cur_line.len()-1] {
+                if line == &cur_line[0..cur_line.len() - 1] {
                     return Ok(true);
                 }
             }
