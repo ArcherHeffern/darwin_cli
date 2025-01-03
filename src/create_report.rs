@@ -81,7 +81,7 @@ fn initialize_handlebars(handlebars: &mut Handlebars) -> Result<()> {
     handlebars.register_template_string("student_index_template", include_str!("../template/student_index.hbs"))
         .map_err(|e| Error::new(ErrorKind::Other, e.to_string()))?;
     // handlebars.register_template_string("student_template", include_str!("../template/student.hbs"))
-    //     .map_err(|e| Error::new(ErrorKind::Other, e.to_string()))?;
+        // .map_err(|e| Error::new(ErrorKind::Other, e.to_string()))?;
     Ok(())
 }
 
@@ -95,6 +95,7 @@ fn report_initialize(report_root: &Path) -> Result<()> {
     create_dir(report_root.join("students"))?;
     create_dir(report_root.join("styles"))?;
     
+    fs::write(report_root.join("styles").join("global.css"), include_bytes!("../template/global.css"))?;
     fs::write(report_root.join("styles").join("index.css"), include_str!("../template/index.css"))?;
     fs::write(report_root.join("styles").join("student_index.css"), include_str!("../template/student_index.css"))?;
     fs::write(report_root.join("styles").join("student.css"), include_str!("../template/student.css"))?;

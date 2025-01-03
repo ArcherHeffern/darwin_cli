@@ -1,0 +1,37 @@
+@font-face {
+    font-family: "Libre Baskerville";
+    font-style: normal;
+    font-weight: 400;
+    font-display: block;
+    src: url(LibreBaskerville-Regular.ttf) format("truetype");
+}
+
+body {
+    background-color: #181818;
+}
+
+* {
+    color: #dfdfdf;
+    font-family: "Libre Baskerville", Arial;
+    font-weight: 400;
+    font-style: normal;
+    line-height: 1.5;
+}
+
+#student-list {
+    position: absolute;
+    left: 50px;
+    top: 50px;
+}
+
+a {
+    text-decoration: none;
+}
+
+a:hover {
+    opacity: 0.55;
+}
+
+.button {
+    text-decoration: underline;
+}
