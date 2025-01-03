@@ -1,9 +1,10 @@
-use std::{fs::{self, create_dir, remove_dir, remove_dir_all, remove_file}, io::{Error, ErrorKind, Result}, path::Path};
+use std::{fs::{self, create_dir, remove_dir_all}, io::{Error, ErrorKind, Result}, path::{Path, PathBuf}};
 
 use serde::Serialize;
+use tempfile::tempdir;
 use tinytemplate::TinyTemplate;
 
-use crate::{config::{darwin_root, student_diff_file, student_project_file, tests_ran_file}, list_students::list_students, list_tests::list_tests, util::{file_contains_line, initialize_project, set_active_project}};
+use crate::{config::{darwin_root, student_diff_file, tests_ran_file}, list_students::list_students, list_tests::list_tests, util::{file_contains_line, flatten_move_recursive, list_files_recursively, recreate_student_main }};
 
 
 pub fn create_report(report_path: &Path, tests: &Vec<String>) -> Result<()> {
@@ -34,26 +35,35 @@ pub fn create_report(report_path: &Path, tests: &Vec<String>) -> Result<()> {
     })
 }
 
-fn _create_report(report_path: &Path, tests: &Vec<String>) -> Result<()> {
-    create_dir(report_path)?;
+fn _create_report(report_root: &Path, tests: &Vec<String>) -> Result<()> {
+    report_initialize(report_root).map_err(|e|Error::new(ErrorKind::Other, format!("Failed to initialize report: {}", e)))?;
     let students = list_students();
     if students.is_empty() {
         return Ok(());
     }
-    create_report_student_list(&report_path.join("index.html"), &students)?;
+    create_report_student_list(&report_root.join("index.html"), &students)?;
     let mut prev_student = "";
     for i in 0..students.len()-1 {
         let student = students[i].as_str();
-        create_student_report(report_path, tests, &prev_student, &student, &students[i+1])?;
+        create_student_report(report_root, tests, &prev_student, &student, &students[i+1])?;
         prev_student = student;
     }
-    create_student_report(report_path, tests, &prev_student, &students[students.len()-1], "")?;
+    create_student_report(report_root, tests, &prev_student, &students[students.len()-1], "")?;
     Ok(())
 }
 
 #[derive(Serialize)]
 struct StudentListContext<'a> {
     students: &'a[String]
+}
+
+fn report_initialize(report_root: &Path) -> Result<()> {
+    create_dir(report_root)?;
+    create_dir(report_root.join("results"))?;
+    create_dir(report_root.join("file_trees"))?;
+    create_dir(report_root.join("students"))?;
+    create_dir(report_root.join("styles"))?;
+    Ok(())
 }
 
 fn create_report_student_list(dest: &Path, students: &[String]) -> Result<()> {
@@ -67,29 +77,25 @@ fn create_report_student_list(dest: &Path, students: &[String]) -> Result<()> {
 }
 
 fn create_student_report(report_root: &Path, tests: &Vec<String>, prev_student: &str, student: &str, next_student: &str) -> Result<()> {
-    let student_project_path = student_project_file(student);
-    if student_project_path.is_dir() {
-        remove_dir_all(&student_project_path)?;
-    } else if student_project_path.is_file() {
-        remove_file(&student_project_path)?;
-    }
-    _create_student_report(report_root, tests, prev_student, student, &student_project_path, next_student)
+    _create_student_report(report_root, tests, prev_student, student, next_student)
 }
 
-fn _create_student_report(report_root: &Path, tests: &Vec<String>, prev_student: &str, student: &str, student_project_path: &Path, next_student: &str) -> Result<()> {
+fn _create_student_report(report_root: &Path, tests: &Vec<String>, prev_student: &str, student: &str, next_student: &str) -> Result<()> {
     let diff_path = student_diff_file(student);
-    initialize_project(&student_project_path)?;
-    set_active_project(&student_project_path, &diff_path)?;
-    // Create the file hierarchy
-    for test in tests {
-        create_student_report_for_test(report_root, test, prev_student, student, next_student);
+    let student_dir = &report_root.join("students").join(student);
+    let tmpdir = tempdir()?;
+    recreate_student_main(&diff_path, tmpdir.path(), tmpdir.path())?;
+    let file_paths = list_files_recursively(tmpdir.path());
+    for file in file_paths.iter() {
+        let code = fs::read_to_string(&file)?;
+        let student_report = create_student_report_html(code, &file_paths, tests, prev_student, student, next_student);
+        fs::write(file, student_report)?;
     }
-
-    remove_dir_all(student_project_path)?;
+    flatten_move_recursive(tmpdir.path(), student_dir, None)?;
 
     Ok(())
 }
 
-fn create_student_report_for_test(report_root: &Path, test: &str, prev_student: &str, student: &str, next_student: &str) {
-
+fn create_student_report_html(code: String, file_paths: &Vec<PathBuf>, tests: &Vec<String>, prev_student: &str, student: &str, next_student: &str) -> String {
+    code
 }

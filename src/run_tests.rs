@@ -6,7 +6,7 @@ use std::{
 };
 use threadpool::ThreadPool;
 
-use crate::{config::{compile_errors_file, darwin_root, diff_dir, student_diff_file, student_project_file, student_result_file, tests_ran_file}, util::{file_append_line, initialize_project, is_student, is_test, set_active_project}};
+use crate::{config::{compile_errors_file, darwin_root, diff_dir, student_diff_file, student_project_file, student_result_file, tests_ran_file}, util::{create_student_project, file_append_line, is_student, is_test}};
 
 pub fn concurrent_run_tests(
     test: &str,
@@ -111,8 +111,7 @@ fn _run_test_for_student(
     dest_file: &Path,
 ) -> Result<()> {
     let diff_path = student_diff_file(student);
-    initialize_project(project_path)?;
-    set_active_project(project_path, diff_path.as_path())?;
+    create_student_project(project_path, &diff_path)?;
     if let Err(e) = compile(project_path) {
         let compile_error_path = compile_errors_file();
         let mut compile_error_file = OpenOptions::new()

@@ -55,11 +55,6 @@ A report contains all students test results and code (syntax highlighted) in a e
 ```verbatim
 report
 | -- index.html (Contains student list)
-| -- results/ (results to be iframed in)
-|     | -- $(student_name)_$(test_name).html
-| 
-| -- file_trees/ (sidebars to be iframed in)
-|     | -- $(student_name)_$(test_name).html
 |
 | -- students/
 |     | -- $(student_name)
@@ -70,6 +65,12 @@ report
 ```
 
 ## Student Page
+- Top left: Main button
+- Top: File full name
+- Left: File hierarchy + Links
+- Middle Code for current file
+- Right: Tests + tests failed
+- Bottom: Next student, previous student
 
 
 # .darwin folder structure

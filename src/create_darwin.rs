@@ -1,7 +1,7 @@
 use crate::config::{compile_errors_file, darwin_root, diff_dir, main_dir, projects_dir, results_dir, student_diff_file, test_dir, tests_ran_file};
 use crate::util::{self, create_diff};
 use io::prelude::*;
-use std::fs::{remove_dir_all, File, OpenOptions};
+use std::fs::{remove_dir_all, File};
 use std::io::{self, copy, BufReader, BufWriter, Error, ErrorKind, Result};
 use std::{collections::HashSet, fs, path::Path};
 use tempfile::{tempdir, tempfile};

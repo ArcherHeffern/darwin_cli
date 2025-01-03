@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-use std::fs::{self, create_dir, create_dir_all, OpenOptions};
+use std::fs::{self, create_dir, create_dir_all, rename, OpenOptions};
 use std::io::{copy, prelude::*, BufReader, BufWriter, Error, ErrorKind, Result};
 use std::os::unix::fs::symlink;
 use std::path::PathBuf;
@@ -9,7 +9,7 @@ use std::{fs::File, io, path::Path};
 use zip::result::ZipError;
 use zip::ZipArchive;
 
-use crate::config::darwin_root;
+use crate::config::{darwin_root, main_dir};
 use crate::{list_students, list_tests};
 
 pub fn prompt_yn(prompt: &str) -> Result<bool> {
@@ -38,6 +38,48 @@ pub fn copy_dir_all(
             fs::copy(entry.path(), dst.as_ref().join(entry.file_name()))?;
         }
     }
+    Ok(())
+}
+
+pub fn flatten_move_recursive(
+    src: &Path, 
+    dst: &Path,
+    ignore: Option<&HashSet<&str>>
+) -> io::Result<()> {
+    // Invariant: dst does not exist
+    if dst.exists() {
+        return Err(io::Error::new(ErrorKind::AlreadyExists, "flatten_move_all expects dst to not exist"));
+    }
+    create_dir_all(dst)?;
+    _flatten_move_recursive(src, dst, ignore)
+}
+fn _flatten_move_recursive(
+    src: &Path,
+    dst: &Path,
+    ignore: Option<&HashSet<&str>>
+) -> io::Result<()> {
+    if src.is_dir() {
+        match fs::read_dir(src) {
+            Ok(entries) => {
+                for entry in entries.into_iter().flatten() {
+                    let path = entry.path();
+                    if path.is_file() {
+                        if let Some(name) = path.file_name() {
+                            if ignore.is_some_and(|i|name.to_str().map_or(false, |n|i.contains(n)))
+                            {
+                                continue;
+                            }
+                            rename(&path, dst.join(name))?;
+                        }
+                    } else if path.is_dir() {
+                        _flatten_move_recursive(&path, dst, ignore)?;
+                    }
+                }
+            }
+            Err(e) => println!("Failed to read directory {}: {}", src.display(), e),
+        }
+    }
+
     Ok(())
 }
 
@@ -166,7 +208,7 @@ pub fn is_student(student: &str) -> bool {
         .any(|s| s == student)
 }
 
-pub fn initialize_project(project_path: &Path) -> Result<()> {
+pub fn create_student_project(project_path: &Path, diff_path: &Path) -> Result<()> {
     // Invariants:
     // - darwin_path is an existing .darwin project root directory
     // - project_path does not exist
@@ -175,38 +217,37 @@ pub fn initialize_project(project_path: &Path) -> Result<()> {
 
     create_dir_all(project_path)?;
     create_dir(project_path.join("src"))?;
-    copy_dir_all(
-        darwin_root().join("main"),
-        project_path.join("src").join("main"),
-        &HashSet::new(),
-    )?;
     symlink(
         darwin_root().join("test").canonicalize()?,
         project_path.join("src").join("test"),
     )?;
+    create_dir_all(project_path.join("src").join("main"))?;
+    recreate_student_main(diff_path, &project_path.join("src").join("main"), &project_path)?;
 
     Ok(())
 }
 
-pub fn set_active_project(project_path: &Path, diff_path: &Path) -> Result<()> {
-    // Invariants:
-    // - darwin_path is an existing .darwin project root directory
-    // - project_path is an existing, newly initialized project directory
-    assert!(darwin_root().is_dir());
-    assert!(project_path.is_dir());
+pub fn recreate_student_main(diff_path: &Path, main_dest_dir: &Path, pom_dest_dir: &Path) -> Result<()> {
+    // Dest dir must be empty
+    // pom.xml will also end up in this directory
+    if !main_dest_dir.is_dir() {
+        return Err(Error::new(ErrorKind::Other, "Expected dir"));
+    }
 
-    let project_main_path = project_path.join("src").join("main");
+    copy_dir_all(
+        main_dir(),
+        main_dest_dir,
+        &HashSet::new(),
+    )?;
     patch(
         darwin_root().join("main").as_path(),
         diff_path,
-        project_main_path.as_path(),
+        main_dest_dir,
     )?;
-
     fs::rename(
-        project_path.join("src").join("main").join("pom.xml"),
-        project_path.join("pom.xml"),
+        main_dest_dir.join("pom.xml"),
+        pom_dest_dir.join("pom.xml"),
     )?;
-
     Ok(())
 }
 
