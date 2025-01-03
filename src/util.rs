@@ -9,6 +9,7 @@ use std::{fs::File, io, path::Path};
 use zip::result::ZipError;
 use zip::ZipArchive;
 
+use crate::config::darwin_path;
 use crate::{list_students, list_tests};
 
 pub fn prompt_yn(prompt: &str) -> Result<bool> {
@@ -169,38 +170,38 @@ pub fn is_student(darwin_path: &Path, student: &str) -> bool {
         .any(|s| s == student)
 }
 
-pub fn initialize_project(darwin_path: &Path, project_path: &Path) -> Result<()> {
+pub fn initialize_project(project_path: &Path) -> Result<()> {
     // Invariants:
     // - darwin_path is an existing .darwin project root directory
     // - project_path does not exist
-    assert!(darwin_path.is_dir());
+    assert!(darwin_path().is_dir());
     assert!(!project_path.exists());
 
     create_dir_all(project_path)?;
     create_dir(project_path.join("src"))?;
     copy_dir_all(
-        darwin_path.join("main"),
+        darwin_path().join("main"),
         project_path.join("src").join("main"),
         &HashSet::new(),
     )?;
     symlink(
-        darwin_path.join("test").canonicalize()?,
+        darwin_path().join("test").canonicalize()?,
         project_path.join("src").join("test"),
     )?;
 
     Ok(())
 }
 
-pub fn set_active_project(darwin_path: &Path, project_path: &Path, diff_path: &Path) -> Result<()> {
+pub fn set_active_project(project_path: &Path, diff_path: &Path) -> Result<()> {
     // Invariants:
     // - darwin_path is an existing .darwin project root directory
     // - project_path is an existing, newly initialized project directory
-    assert!(darwin_path.is_dir());
+    assert!(darwin_path().is_dir());
     assert!(project_path.is_dir());
 
     let project_main_path = project_path.join("src").join("main");
     patch(
-        darwin_path.join("main").as_path(),
+        darwin_path().join("main").as_path(),
         diff_path,
         project_main_path.as_path(),
     )?;

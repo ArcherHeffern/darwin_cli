@@ -1,6 +1,6 @@
 use std::{
     collections::HashSet,
-    fs::{remove_dir, remove_file, OpenOptions},
+    fs::{remove_dir_all, remove_file, OpenOptions},
     io::{stdin, BufRead},
     path::Path,
     process::exit,
@@ -22,7 +22,7 @@ pub fn create_darwin(
         {
             return;
         }
-        if remove_dir(darwin_path).is_err() {
+        if remove_dir_all(darwin_path).is_err() {
             eprintln!("Failed to delete darwin project");
             return;
         }
@@ -155,7 +155,7 @@ pub fn view_student_submission(darwin_path: &Path, student: &str) {
     if dest.is_file() && remove_file(dest).is_err() {
         eprintln!("Failed to remove {:?}", dest);
         return;
-    } else if dest.is_dir() && remove_dir(dest).is_err() {
+    } else if dest.is_dir() && remove_dir_all(dest).is_err() {
         eprintln!("Failed to remove {:?}", dest);
         return;
     }
@@ -165,8 +165,26 @@ pub fn view_student_submission(darwin_path: &Path, student: &str) {
     };
 }
 
-pub fn create_report(darwin_path: &Path, dest_path: &Path) {
-    match create_report::create_report(darwin_path, dest_path) {
+pub fn create_report(darwin_path: &Path, report_path: &Path, tests: &Vec<String>) {
+    if report_path.exists() {
+        println!("'{:?}' Exists. Continue? (Y/N)", report_path);
+        let mut s = String::new();
+        stdin().lock().read_line(&mut s).expect("Stdin to work");
+        s = s.to_lowercase();
+        if s != "y\n" {
+            exit(0);
+        }
+    }
+
+    if report_path.is_file() && remove_file(report_path).is_err() {
+        eprintln!("Failed to remove {:?}", report_path);
+        return;
+    } else if report_path.is_dir() && remove_dir_all(report_path).is_err() {
+        eprintln!("Failed to remove {:?}", report_path);
+        return;
+    }
+
+    match create_report::create_report(darwin_path, report_path, tests) {
         Ok(()) => {
             println!("Report generated");
         }

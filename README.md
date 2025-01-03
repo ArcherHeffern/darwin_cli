@@ -58,7 +58,7 @@ report
 | -- results/ (results to be iframed in)
 |     | -- $(student_name)_$(test_name).html
 | 
-| -- sidebars/ (sidebars to be iframed in)
+| -- file_trees/ (sidebars to be iframed in)
 |     | -- $(student_name)_$(test_name).html
 |
 | -- students/

@@ -123,8 +123,8 @@ fn _run_test_for_student(
     dest_file: &Path,
 ) -> Result<()> {
     let diff_path = to_diff_path(darwin_path, student);
-    initialize_project(darwin_path, project_path)?;
-    set_active_project(darwin_path, project_path, diff_path.as_path())?;
+    initialize_project(project_path)?;
+    set_active_project(project_path, diff_path.as_path())?;
     if let Err(e) = compile(project_path) {
         let compile_error_path = darwin_path.join("results").join("compile_errors");
         let mut compile_error_file = OpenOptions::new()

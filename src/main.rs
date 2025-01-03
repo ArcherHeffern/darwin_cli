@@ -71,7 +71,8 @@ enum SubCommand {
         outfile: String
     },
     CreateReport {
-        dest_path: Utf8PathBuf
+        dest_path: Utf8PathBuf,
+        tests: Vec<String>
     },
     Server,
     Clean
@@ -151,8 +152,8 @@ fn main() {
         SubCommand::ViewStudentSubmission { student } => {
             commands::view_student_submission(darwin_path, student.as_str());
         }
-        SubCommand::CreateReport { dest_path } => {
-            commands::create_report(darwin_path, dest_path.as_std_path());
+        SubCommand::CreateReport { dest_path, tests } => {
+            commands::create_report(darwin_path, dest_path.as_std_path(), &tests);
         }
         SubCommand::Server => {
             commands::server();
