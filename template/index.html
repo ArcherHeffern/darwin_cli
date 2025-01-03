@@ -3,23 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        body \{
-            background-color: #181818;
-            display: flex;
-            align-items: center;
-            flex-direction: column;
-        }
-        * \{
-            color: #dfdfdf;
-        }
-    </style>
+    <link rel="stylesheet" href="./styles/index.css">
 </head>
 <body>
     <h1>Students</h1>    
     {{ for student in students }}
         <div>
-            <a href="/students/{student}">{student}</a>
+            <a href="./students/{student}">{student}</a>
         </div>
     {{ endfor }}
 

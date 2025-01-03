@@ -1,7 +1,7 @@
 use std::{
     fs::{self, create_dir, remove_dir_all},
     io::{Error, ErrorKind, Result},
-    path::{Path, PathBuf},
+    path::Path},
 };
 
 use serde::Serialize;
@@ -69,26 +69,10 @@ fn _create_report(report_root: &Path, tests: &Vec<String>) -> Result<()> {
     if students.is_empty() {
         return Ok(());
     }
+
     create_report_student_list(&report_root.join("index.html"), &students)?;
-    let mut prev_student = "";
-    for i in 0..students.len() - 1 {
-        let student = students[i].as_str();
-        create_student_report(
-            report_root,
-            tests,
-            &prev_student,
-            &student,
-            &students[i + 1],
-        )?;
-        prev_student = student;
-    }
-    create_student_report(
-        report_root,
-        tests,
-        &prev_student,
-        &students[students.len() - 1],
-        "",
-    )?;
+    create_student_reports(report_root, tests, &students)?;
+
     Ok(())
 }
 
@@ -99,10 +83,16 @@ struct StudentListContext<'a> {
 
 fn report_initialize(report_root: &Path) -> Result<()> {
     create_dir(report_root)?;
-    create_dir(report_root.join("results"))?;
-    create_dir(report_root.join("file_trees"))?;
     create_dir(report_root.join("students"))?;
     create_dir(report_root.join("styles"))?;
+    
+    fs::write(report_root.join("styles").join("index.css"), include_str!("../template/index.css"))?;
+    fs::write(report_root.join("styles").join("student_index.css"), include_str!("../template/student_index.css"))?;
+    fs::write(report_root.join("styles").join("student.css"), include_str!("../template/student.css"))?;
+    fs::write(report_root.join("styles").join("LibreBaskerville-Regular.ttf"), include_bytes!("../template/LibreBaskerville-Regular.ttf"))?;
+    fs::write(report_root.join("styles").join("LibreBaskerville-Italic.ttf"), include_bytes!("../template/LibreBaskerville-Italic.ttf"))?;
+    fs::write(report_root.join("styles").join("LibreBaskerville-Bold.ttf"), include_bytes!("../template/LibreBaskerville-Bold.ttf"))?;
+    fs::write(report_root.join("styles").join("OFL.txt"), include_bytes!("../template/OFL.txt"))?;
     Ok(())
 }
 
@@ -118,14 +108,50 @@ fn create_report_student_list(dest: &Path, students: &[String]) -> Result<()> {
     fs::write(dest, rendered.as_bytes())
 }
 
+fn create_student_reports(
+    report_root: &Path,
+    tests: &Vec<String>,
+    students: &[String]
+) -> Result<()> {
+    let mut student_template = TinyTemplate::new();
+    student_template.add_template("student_template", include_str!("../template/student.html"))
+        .map_err(|e| Error::new(ErrorKind::Other, e.to_string()))?;
+    student_template.add_template("student_index_template", include_str!("../template/student_index.html"))
+        .map_err(|e| Error::new(ErrorKind::Other, e.to_string()))?;
+
+    let mut prev_student = "";
+    for i in 0..students.len() - 1 {
+        let student = students[i].as_str();
+        create_student_report(
+            report_root,
+            tests,
+            &prev_student,
+            &student,
+            &students[i + 1],
+            &student_template
+        )?;
+        prev_student = student;
+    }
+    create_student_report(
+        report_root,
+        tests,
+        &prev_student,
+        &students[students.len() - 1],
+        "",
+        &student_template
+    )?;
+    Ok(())
+}
+
 fn create_student_report(
     report_root: &Path,
     tests: &Vec<String>,
     prev_student: &str,
     student: &str,
     next_student: &str,
+    student_template: &TinyTemplate<'_>
 ) -> Result<()> {
-    _create_student_report(report_root, tests, prev_student, student, next_student)
+    _create_student_report(report_root, tests, prev_student, student, next_student, student_template)
 }
 
 fn _create_student_report(
@@ -134,22 +160,42 @@ fn _create_student_report(
     prev_student: &str,
     student: &str,
     next_student: &str,
+    student_template: &TinyTemplate<'_>
 ) -> Result<()> {
     let diff_path = student_diff_file(student);
     let student_dir = &report_root.join("students").join(student);
     let tmpdir = tempdir()?;
     recreate_student_main(&diff_path, tmpdir.path(), tmpdir.path())?;
     let file_paths = list_files_recursively(tmpdir.path());
-    for file in file_paths.iter() {
+
+    let mut files = Vec::new();
+    file_paths.iter().for_each(|file_path| {
+        let mut html_path = file_path.clone();
+        html_path.set_extension("html");
+        let html_path = html_path.file_name().expect(&format!("File name should exist on {:?}", html_path));
+        let html_path = html_path.to_string_lossy().to_string();
+        let java_path = file_path.strip_prefix(tmpdir.path()).map_err(|_|Error::new(ErrorKind::Other, "Could not strip tmpdir path from file path")).unwrap();
+        let java_path = java_path.to_string_lossy().to_string();
+        files.push( StudentTemplateFile { html_path, java_path });
+    });
+
+    let student_root_file = create_student_index(student, &files, student_template, prev_student, next_student)?;
+    fs::write(tmpdir.path().join("index.html"), student_root_file)?;
+    for (i, file) in file_paths.iter().enumerate() {
         let code = fs::read_to_string(&file)?;
         let student_report = create_student_report_html(
+            &files[i].java_path,
             code,
-            &file_paths,
+            &files,
             tests,
             prev_student,
             student,
             next_student,
-        );
+            student_template
+        ).map_err(|e| {
+            eprintln!("Failed to create report for {}", student);
+            e
+        })?;
         fs::write(file, student_report)?;
     }
     flatten_move_recursive(tmpdir.path(), student_dir, None)?;
@@ -157,13 +203,45 @@ fn _create_student_report(
     Ok(())
 }
 
+#[derive(Serialize)]
+struct StudentIndexTemplateContext<'a> {
+    student: &'a str,
+    prev_student: &'a str,
+    next_student: &'a str,
+    files: &'a Vec<StudentTemplateFile>,
+}
+
+fn create_student_index(
+    student: &str,
+    files: &Vec<StudentTemplateFile>,
+    student_template: &TinyTemplate<'_>,
+    prev_student: &str,
+    next_student: &str
+) -> Result<String> {
+    student_template.render("student_index_template", &StudentIndexTemplateContext { student, files, prev_student, next_student }).map_err(|e|Error::new(ErrorKind::Other, e))
+}
+#[derive(Serialize)]
+struct StudentTemplateContext<'a> {
+    file: &'a str,
+    files: &'a Vec<StudentTemplateFile>,
+    code: &'a str
+}
+
+#[derive(Serialize)]
+struct StudentTemplateFile {
+    java_path: String,
+    html_path: String,
+}
+
 fn create_student_report_html(
+    file: &str,
     code: String,
-    file_paths: &Vec<PathBuf>,
+    files: &Vec<StudentTemplateFile>,
     tests: &Vec<String>,
     prev_student: &str,
     student: &str,
     next_student: &str,
-) -> String {
-    code
+    student_template: &TinyTemplate<'_>
+) -> Result<String> {
+    student_template.render("student_template", &StudentTemplateContext { file, files: &files, code: &code }).map_err(|e|Error::new(ErrorKind::Other, e.to_string()))
 }

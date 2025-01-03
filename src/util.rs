@@ -56,6 +56,7 @@ pub fn flatten_move_recursive(
     create_dir_all(dst)?;
     _flatten_move_recursive(src, dst, ignore)
 }
+
 fn _flatten_move_recursive(
     src: &Path,
     dst: &Path,
@@ -67,7 +68,9 @@ fn _flatten_move_recursive(
                 for entry in entries.into_iter().flatten() {
                     let path = entry.path();
                     if path.is_file() {
-                        if let Some(name) = path.file_name() {
+                        let mut name = path.clone();
+                        name.set_extension("html");
+                        if let Some(name) = name.file_name() {
                             if ignore
                                 .is_some_and(|i| name.to_str().map_or(false, |n| i.contains(n)))
                             {

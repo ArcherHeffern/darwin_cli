@@ -1,0 +1,53 @@
+@font-face {
+    font-family: "Libre Baskerville";
+    font-style: normal;
+    font-weight: 400;
+    font-display: block;
+    src: url(LibreBaskerville-Regular.ttf) format("truetype");
+}
+
+body {
+    background-color: #181818;
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+}
+
+* {
+    color: #dfdfdf;
+    font-family: "Libre Baskerville", Arial;
+    font-weight: 400;
+    font-style: normal;
+    line-height: 1.5;
+}
+
+#file-list {
+    display: flex;
+    width: 400px;
+    justify-content: left;
+    flex-direction: column;
+}
+
+a {
+    text-decoration: none;
+}
+
+a:hover {
+    opacity: 0.55;
+}
+
+footer {
+    margin-top: 50px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.button {
+    text-decoration: underline;
+}
+
+#student-list {
+    position: absolute;
+    left: 50px;
+    top: 50px;
+}

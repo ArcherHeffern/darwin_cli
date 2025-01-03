@@ -6,21 +6,34 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/default.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/java.min.js"></script>
+    <script>hljs.highlightAll();</script>
+    <link rel="stylesheet" href="../../styles/student.css">
 </head>
 <body>
-    <h1>{{ path }}</h1>
+    <h1>{ file }</h1>
     <!-- File hierarchy -->
-     <section>
-        {for }
-     </section>
-    
-    <pre><code >
-        #include <stdio.h>
-        int main() {
-            printf("Hello world");
-            return 0;
-        }
+    <a href="../../index.html">Student List</a>
+    <div style="display:flex;">
+        <section>
+            {{ for file in files }}
+                <div>
+                    <a href="./{ file.html_path }">{ file.java_path }</a>
+                </div>
+            {{ endfor }}
+        </section>
+        <section>
+            <pre>
+                <code class="language-java">
+                    { code }
+                </code>
+            </pre>
+        </section>
 
-    </code></pre>
+        <section>
+            tests
+        </section>
+
+    </div>
+    
 </body>
 </html>
