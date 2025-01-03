@@ -7,7 +7,16 @@ use std::{
 };
 
 use crate::{
-    clean, config::darwin_root, create_darwin, create_report, download_results, list_students::{self}, list_tests, run_tests::{self}, server, types::TestResultError, util::prompt_yn, view_student_results, view_student_submission
+    clean,
+    config::darwin_root,
+    create_darwin, create_report, download_results,
+    list_students::{self},
+    list_tests,
+    run_tests::{self},
+    server,
+    types::TestResultError,
+    util::prompt_yn,
+    view_student_results, view_student_submission,
 };
 
 pub fn create_darwin(
@@ -96,12 +105,10 @@ pub fn view_all_results(test: &str, summarize: bool) {
         eprintln!("Test '{}' not recognized", test);
         return;
     }
-    list_students::list_students()
-        .iter()
-        .for_each(|student| {
-            println!("Processing '{}'", student);
-            view_student_result(student, test, summarize);
-        });
+    list_students::list_students().iter().for_each(|student| {
+        println!("Processing '{}'", student);
+        view_student_result(student, test, summarize);
+    });
 }
 
 pub fn download_results_summary(test: &str, outfile: &str) {
@@ -138,7 +145,6 @@ pub fn download_results_by_classname(test: &str, outfile: &str) {
 }
 
 pub fn view_student_submission(student: &str) {
-
     let dest = Path::new(student);
     if dest.exists() {
         println!("'{}' Exists. Continue? (Y/N)", student);
@@ -179,7 +185,7 @@ pub fn create_report(report_path: &Path, tests: &Vec<String>) {
     } else if report_path.is_dir() && remove_dir_all(report_path).is_err() {
         eprintln!("Failed to remove {:?}", report_path);
         return;
-    } 
+    }
 
     match create_report::create_report(report_path, tests) {
         Ok(()) => {

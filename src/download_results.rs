@@ -1,13 +1,15 @@
-use std::{fs::{File, OpenOptions}, io::{BufWriter, Result}, path::Path};
-
-use crate::{
-    list_students::list_students, list_tests::list_tests, types::TestResultError, view_student_results::parse_test_results
+use std::{
+    fs::{File, OpenOptions},
+    io::{BufWriter, Result},
+    path::Path,
 };
 
-pub fn download_results_summary(
-    outfile: File,
-    test: &str,
-) -> Result<()> {
+use crate::{
+    list_students::list_students, list_tests::list_tests, types::TestResultError,
+    view_student_results::parse_test_results,
+};
+
+pub fn download_results_summary(outfile: File, test: &str) -> Result<()> {
     let f = BufWriter::new(outfile);
     let mut wtr = csv::Writer::from_writer(f);
     let headers = vec![
@@ -36,9 +38,7 @@ pub fn download_results_summary(
             Err(e) => {
                 cur_row[1] = match e {
                     TestResultError::IOError(er) => er.to_string(),
-                    TestResultError::TestsNotRun => {
-                        String::from("Tests not run")
-                    }
+                    TestResultError::TestsNotRun => String::from("Tests not run"),
                 };
             }
         }
@@ -47,10 +47,7 @@ pub fn download_results_summary(
     Ok(())
 }
 
-pub fn download_results_by_classname(
-    out_file: &Path,
-    test: &str,
-) -> Result<()> {
+pub fn download_results_by_classname(out_file: &Path, test: &str) -> Result<()> {
     let out_file = OpenOptions::new()
         .write(true)
         .truncate(true)
@@ -88,9 +85,7 @@ pub fn download_results_by_classname(
             Err(e) => {
                 cur_row[1] = match e {
                     TestResultError::IOError(er) => er.to_string(),
-                    TestResultError::TestsNotRun => {
-                        String::from("Tests not run")
-                    }
+                    TestResultError::TestsNotRun => String::from("Tests not run"),
                 };
             }
         }

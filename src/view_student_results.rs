@@ -9,13 +9,14 @@ use std::{
 use xml::{attribute::OwnedAttribute, name::OwnedName, reader::XmlEvent, EventReader};
 
 use crate::{
-    config::{compile_errors_file, student_result_file}, list_students::list_students, list_tests::list_tests, types::{StatusMsg, TestResult, TestResultError, TestResults, TestState }, util::file_contains_line
+    config::{compile_errors_file, student_result_file},
+    list_students::list_students,
+    list_tests::list_tests,
+    types::{StatusMsg, TestResult, TestResultError, TestResults, TestState},
+    util::file_contains_line,
 };
 
-pub fn parse_test_results(
-    student: &str,
-    test: &str,
-) -> Result<TestResults, TestResultError> {
+pub fn parse_test_results(student: &str, test: &str) -> Result<TestResults, TestResultError> {
     if !list_students().iter().any(|s| s == student) {
         return Err(TestResultError::IOError(io::Error::new(
             io::ErrorKind::NotFound,
@@ -33,11 +34,12 @@ pub fn parse_test_results(
     _parse_test_results(student, test)
 }
 
-fn _parse_test_results(
-    student: &str,
-    test: &str,
-) -> Result<TestResults, TestResultError> {
-    let mut out = TestResults { student: student.to_string(), test: test.to_string(), state: TestState::CompilationError };
+fn _parse_test_results(student: &str, test: &str) -> Result<TestResults, TestResultError> {
+    let mut out = TestResults {
+        student: student.to_string(),
+        test: test.to_string(),
+        state: TestState::CompilationError,
+    };
 
     if file_contains_line(&compile_errors_file(), student).unwrap() {
         out.state = TestState::CompilationError;
@@ -50,7 +52,7 @@ fn _parse_test_results(
     }
 
     parse_surefire_report(&result_file, student, test).map(|results| {
-        out.state = TestState::Ok {results};
+        out.state = TestState::Ok { results };
         out
     })
 }
@@ -114,7 +116,12 @@ fn parse_surefire_report(
                 }
             }
             Ok(XmlEvent::EndElement { name: _name }) if _name == testcase => {
-                out.push(TestResult { name, classname, time, msg });
+                out.push(TestResult {
+                    name,
+                    classname,
+                    time,
+                    msg,
+                });
 
                 name = String::new();
                 classname = String::new();

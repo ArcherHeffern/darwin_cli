@@ -42,13 +42,16 @@ pub fn copy_dir_all(
 }
 
 pub fn flatten_move_recursive(
-    src: &Path, 
+    src: &Path,
     dst: &Path,
-    ignore: Option<&HashSet<&str>>
+    ignore: Option<&HashSet<&str>>,
 ) -> io::Result<()> {
     // Invariant: dst does not exist
     if dst.exists() {
-        return Err(io::Error::new(ErrorKind::AlreadyExists, "flatten_move_all expects dst to not exist"));
+        return Err(io::Error::new(
+            ErrorKind::AlreadyExists,
+            "flatten_move_all expects dst to not exist",
+        ));
     }
     create_dir_all(dst)?;
     _flatten_move_recursive(src, dst, ignore)
@@ -56,7 +59,7 @@ pub fn flatten_move_recursive(
 fn _flatten_move_recursive(
     src: &Path,
     dst: &Path,
-    ignore: Option<&HashSet<&str>>
+    ignore: Option<&HashSet<&str>>,
 ) -> io::Result<()> {
     if src.is_dir() {
         match fs::read_dir(src) {
@@ -65,7 +68,8 @@ fn _flatten_move_recursive(
                     let path = entry.path();
                     if path.is_file() {
                         if let Some(name) = path.file_name() {
-                            if ignore.is_some_and(|i|name.to_str().map_or(false, |n|i.contains(n)))
+                            if ignore
+                                .is_some_and(|i| name.to_str().map_or(false, |n| i.contains(n)))
                             {
                                 continue;
                             }
@@ -203,9 +207,7 @@ pub fn is_test(test: &str) -> bool {
 }
 
 pub fn is_student(student: &str) -> bool {
-    list_students::list_students()
-        .iter()
-        .any(|s| s == student)
+    list_students::list_students().iter().any(|s| s == student)
 }
 
 pub fn create_student_project(project_path: &Path, diff_path: &Path) -> Result<()> {
@@ -222,32 +224,33 @@ pub fn create_student_project(project_path: &Path, diff_path: &Path) -> Result<(
         project_path.join("src").join("test"),
     )?;
     create_dir_all(project_path.join("src").join("main"))?;
-    recreate_student_main(diff_path, &project_path.join("src").join("main"), &project_path)?;
+    recreate_student_main(
+        diff_path,
+        &project_path.join("src").join("main"),
+        &project_path,
+    )?;
 
     Ok(())
 }
 
-pub fn recreate_student_main(diff_path: &Path, main_dest_dir: &Path, pom_dest_dir: &Path) -> Result<()> {
+pub fn recreate_student_main(
+    diff_path: &Path,
+    main_dest_dir: &Path,
+    pom_dest_dir: &Path,
+) -> Result<()> {
     // Dest dir must be empty
     // pom.xml will also end up in this directory
     if !main_dest_dir.is_dir() {
         return Err(Error::new(ErrorKind::Other, "Expected dir"));
     }
 
-    copy_dir_all(
-        main_dir(),
-        main_dest_dir,
-        &HashSet::new(),
-    )?;
+    copy_dir_all(main_dir(), main_dest_dir, &HashSet::new())?;
     patch(
         darwin_root().join("main").as_path(),
         diff_path,
         main_dest_dir,
     )?;
-    fs::rename(
-        main_dest_dir.join("pom.xml"),
-        pom_dest_dir.join("pom.xml"),
-    )?;
+    fs::rename(main_dest_dir.join("pom.xml"), pom_dest_dir.join("pom.xml"))?;
     Ok(())
 }
 
@@ -273,12 +276,18 @@ pub fn patch(patch_path: &Path, diff_path: &Path, dest_path: &Path) -> Result<()
             copy(&mut patch_reader, &mut stdin_writer)?;
         }
         None => {
-            return Err(Error::new(ErrorKind::BrokenPipe, format!("Cannot access stdin of patch process {}", output.id())));
+            return Err(Error::new(
+                ErrorKind::BrokenPipe,
+                format!("Cannot access stdin of patch process {}", output.id()),
+            ));
         }
     }
 
     if output.wait().is_err() {
-        return Err(Error::new(ErrorKind::Other, "Failed to wait for patch process"));
+        return Err(Error::new(
+            ErrorKind::Other,
+            "Failed to wait for patch process",
+        ));
     }
     Ok(())
 }
@@ -306,9 +315,7 @@ pub fn file_contains_line(file: &Path, line: &str) -> Result<bool> {
 }
 
 pub fn file_append_line(file: &Path, line: &str) -> Result<()> {
-    let mut f = OpenOptions::new()
-        .append(true)
-        .open(file)?;
+    let mut f = OpenOptions::new().append(true).open(file)?;
     writeln!(f, "{}", line)?;
     Ok(())
 }

@@ -1,6 +1,6 @@
 use std::{
     fs::{create_dir, remove_dir_all, File, OpenOptions},
-    io
+    io,
 };
 
 use crate::config::{compile_errors_file, projects_dir, results_dir, tests_ran_file};

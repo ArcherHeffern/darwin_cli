@@ -1,4 +1,3 @@
-
 use crate::config::diff_dir;
 
 pub fn list_students() -> Vec<String> {

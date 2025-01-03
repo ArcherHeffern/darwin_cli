@@ -1,6 +1,5 @@
 use std::path::PathBuf;
 
-
 pub fn darwin_root() -> PathBuf {
     PathBuf::from(".darwin")
 }

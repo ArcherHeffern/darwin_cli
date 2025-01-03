@@ -1,4 +1,7 @@
-use crate::config::{compile_errors_file, darwin_root, diff_dir, main_dir, projects_dir, results_dir, student_diff_file, test_dir, tests_ran_file};
+use crate::config::{
+    compile_errors_file, darwin_root, diff_dir, main_dir, projects_dir, results_dir,
+    student_diff_file, test_dir, tests_ran_file,
+};
 use crate::util::{self, create_diff};
 use io::prelude::*;
 use std::fs::{remove_dir_all, File};
@@ -65,12 +68,9 @@ fn _create_darwin(
     fs::create_dir_all(test_dir())?;
     fs::create_dir_all(projects_dir())?;
     fs::create_dir_all(results_dir())?;
-    File::create(tests_ran_file())?; // Possible error for this and below line if the leading paths don't exist. 
+    File::create(tests_ran_file())?; // Possible error for this and below line if the leading paths don't exist.
     File::create(compile_errors_file())?;
-    fs::copy(
-        skeleton_path.join("pom.xml"),
-        main_dir().join("pom.xml"),
-    )?;
+    fs::copy(skeleton_path.join("pom.xml"), main_dir().join("pom.xml"))?;
 
     util::copy_dir_all(
         skeleton_path.join("src").join("main"),
@@ -83,11 +83,9 @@ fn _create_darwin(
         copy_ignore_set,
     )?;
 
-    submissions_to_diffs(
-        submission_zipfile_path,
-        copy_ignore_set,
-        |s, e| eprintln!("Error extracting {}'s submission: {}", s, e),
-    )?;
+    submissions_to_diffs(submission_zipfile_path, copy_ignore_set, |s, e| {
+        eprintln!("Error extracting {}'s submission: {}", s, e)
+    })?;
 
     Ok(())
 }
@@ -111,12 +109,7 @@ fn submissions_to_diffs(
 
         let student_name = &file_name[0..file_name.find('_').expect("Moodle submission zipfile must delimit all contained student submission zipfiles with '_'. Perhaps moodle changed its naming scheme or this isn't a moodle submission zipfile.")];
 
-        if let Err(e) = submission_to_diff(
-            &file_name,
-            &mut zip,
-            student_name,
-            file_ignore_set,
-        ) {
+        if let Err(e) = submission_to_diff(&file_name, &mut zip, student_name, file_ignore_set) {
             on_submission_extraction_error(student_name, e);
         }
     }

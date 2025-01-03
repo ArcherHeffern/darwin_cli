@@ -6,7 +6,13 @@ use std::{
 };
 use threadpool::ThreadPool;
 
-use crate::{config::{compile_errors_file, darwin_root, diff_dir, student_diff_file, student_project_file, student_result_file, tests_ran_file}, util::{create_student_project, file_append_line, is_student, is_test}};
+use crate::{
+    config::{
+        compile_errors_file, darwin_root, diff_dir, student_diff_file, student_project_file,
+        student_result_file, tests_ran_file,
+    },
+    util::{create_student_project, file_append_line, is_student, is_test},
+};
 
 pub fn concurrent_run_tests(
     test: &str,
@@ -166,11 +172,7 @@ fn run_test(project_path: &Path, test: &str) -> Result<()> {
     Ok(())
 }
 
-fn relocate_test_results(
-    project_path: &Path,
-    test: &str,
-    dest_file: &Path
-) -> Result<()> {
+fn relocate_test_results(project_path: &Path, test: &str, dest_file: &Path) -> Result<()> {
     let results_filename_from = format!("TEST-{}.xml", test);
     let results_file_from = project_path
         .join("target")
