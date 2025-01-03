@@ -14,6 +14,7 @@ mod view_student_results;
 mod download_results;
 mod view_student_submission;
 mod server;
+mod create_report;
 mod clean;
 mod config;
 mod types;
@@ -68,6 +69,9 @@ enum SubCommand {
     DownloadResultsByClassName {
         test: String,
         outfile: String
+    },
+    CreateReport {
+        dest_path: Utf8PathBuf
     },
     Server,
     Clean
@@ -147,11 +151,14 @@ fn main() {
         SubCommand::ViewStudentSubmission { student } => {
             commands::view_student_submission(darwin_path, student.as_str());
         }
-        SubCommand::Clean  => {
-            commands::clean(darwin_path);
+        SubCommand::CreateReport { dest_path } => {
+            commands::create_report(darwin_path, dest_path.as_std_path());
         }
         SubCommand::Server => {
             commands::server();
+        }
+        SubCommand::Clean  => {
+            commands::clean(darwin_path);
         }
     }
 }
