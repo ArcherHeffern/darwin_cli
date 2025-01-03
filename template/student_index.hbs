@@ -3,19 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{ student }</title>
+    <title>{{student}}</title>
     <link rel="stylesheet" href="../../styles/student_index.css">
 </head>
 <body>
     <a href="../../index.html" id="student-list">Student List</a>
-    <h1>{ student }</h1> 
+    <h1>{{student}}</h1> 
     <div id="file-list">
-        {{ for file in files }}
-            <a href="./{file.html_path}">{file.java_path}</a>
-        {{ endfor }}
+        {{#each files}}
+            <a href="./{{this.html_path}}">{{this.java_path}}</a>
+        {{/each}}
         <footer>
-            <a class="button" href="../{prev_student}">{prev_student}</a>
-            <a class="button" href="../{next_student}">{next_student}</a>
+            <a class="button" href="../{{prev_student}}">{{prev_student}}</a>
+            <a class="button" href="../{{next_student}}">{{next_student}}</a>
         </footer>
     </div>
 </body>

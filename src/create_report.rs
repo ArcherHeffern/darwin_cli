@@ -1,20 +1,15 @@
 use std::{
-    fs::{self, create_dir, remove_dir_all},
-    io::{Error, ErrorKind, Result},
-    path::Path,
+    fs::{self, create_dir, remove_dir_all}, io::{Error, ErrorKind, Result}, path::Path
 };
 
 use serde::Serialize;
 use tempfile::tempdir;
-use tinytemplate::TinyTemplate;
+use handlebars::Handlebars;
 
 use crate::{
-    config::{darwin_root, student_diff_file, tests_ran_file},
-    list_students::list_students,
-    list_tests::list_tests,
-    util::{
+    config::{darwin_root, student_diff_file, tests_ran_file}, list_students::list_students, list_tests::list_tests, types::{TestResult, TestResultError, TestResults}, util::{
         file_contains_line, flatten_move_recursive, list_files_recursively, recreate_student_main,
-    },
+    }, view_student_results::parse_test_results
 };
 
 pub fn create_report(report_path: &Path, tests: &Vec<String>) -> Result<()> {
@@ -70,9 +65,23 @@ fn _create_report(report_root: &Path, tests: &Vec<String>) -> Result<()> {
         return Ok(());
     }
 
-    create_report_student_list(&report_root.join("index.html"), &students)?;
-    create_student_reports(report_root, tests, &students)?;
+    let mut handlebars = Handlebars::new();
+    initialize_handlebars(&mut handlebars)?;
 
+    create_report_student_list(&report_root.join("index.html"), &students, &handlebars)?;
+    create_student_reports(report_root, tests, &students, &handlebars)?;
+
+    Ok(())
+}
+
+fn initialize_handlebars(handlebars: &mut Handlebars) -> Result<()> {
+
+    handlebars.register_template_string("student_list", include_str!("../template/index.hbs"))
+        .map_err(|e| Error::new(ErrorKind::Other, e.to_string()))?;
+    handlebars.register_template_string("student_index_template", include_str!("../template/student_index.hbs"))
+        .map_err(|e| Error::new(ErrorKind::Other, e.to_string()))?;
+    // handlebars.register_template_string("student_template", include_str!("../template/student.hbs"))
+    //     .map_err(|e| Error::new(ErrorKind::Other, e.to_string()))?;
     Ok(())
 }
 
@@ -96,28 +105,18 @@ fn report_initialize(report_root: &Path) -> Result<()> {
     Ok(())
 }
 
-fn create_report_student_list(dest: &Path, students: &[String]) -> Result<()> {
-    let mut tt = TinyTemplate::new();
-    tt.add_template("student_list", include_str!("../template/index.html"))
-        .map_err(|e| Error::new(ErrorKind::Other, e.to_string()))?;
+fn create_report_student_list(dest: &Path, students: &[String], handlebars: &Handlebars) -> Result<()> {
 
-    let rendered = tt
-        .render("student_list", &StudentListContext { students })
-        .map_err(|e| Error::new(ErrorKind::Other, e.to_string()))?;
-
-    fs::write(dest, rendered.as_bytes())
+    let rendered = handlebars.render("student_list", &StudentListContext {students}).map_err(|e|Error::new(ErrorKind::Other, format!("could not open template: {}", e)))?;
+    fs::write(dest, rendered)
 }
 
 fn create_student_reports(
     report_root: &Path,
     tests: &Vec<String>,
-    students: &[String]
+    students: &[String],
+    handlebars: &Handlebars
 ) -> Result<()> {
-    let mut student_template = TinyTemplate::new();
-    student_template.add_template("student_template", include_str!("../template/student.html"))
-        .map_err(|e| Error::new(ErrorKind::Other, e.to_string()))?;
-    student_template.add_template("student_index_template", include_str!("../template/student_index.html"))
-        .map_err(|e| Error::new(ErrorKind::Other, e.to_string()))?;
 
     let mut prev_student = "";
     for i in 0..students.len() - 1 {
@@ -128,7 +127,7 @@ fn create_student_reports(
             &prev_student,
             &student,
             &students[i + 1],
-            &student_template
+            &handlebars
         )?;
         prev_student = student;
     }
@@ -138,7 +137,7 @@ fn create_student_reports(
         &prev_student,
         &students[students.len() - 1],
         "",
-        &student_template
+        &handlebars
     )?;
     Ok(())
 }
@@ -149,9 +148,9 @@ fn create_student_report(
     prev_student: &str,
     student: &str,
     next_student: &str,
-    student_template: &TinyTemplate<'_>
+    handlebars: &Handlebars
 ) -> Result<()> {
-    _create_student_report(report_root, tests, prev_student, student, next_student, student_template)
+    _create_student_report(report_root, tests, prev_student, student, next_student, handlebars)
 }
 
 fn _create_student_report(
@@ -160,7 +159,7 @@ fn _create_student_report(
     prev_student: &str,
     student: &str,
     next_student: &str,
-    student_template: &TinyTemplate<'_>
+    student_template: &Handlebars<'_>
 ) -> Result<()> {
     let diff_path = student_diff_file(student);
     let student_dir = &report_root.join("students").join(student);
@@ -179,6 +178,37 @@ fn _create_student_report(
         files.push( StudentTemplateFile { html_path, java_path });
     });
 
+    let mut all_tests: Vec<TestGroupContext> = Vec::new();
+    let test_results: Vec<std::result::Result<TestResults, TestResultError>> = tests.iter().map(|test|parse_test_results(student, test)).collect();
+    for i in 0..test_results.len() {
+        match &test_results[i] {
+            Ok(ok) => {
+                match ok.group_by_classname() {
+                    None => {
+                        all_tests.push(TestGroupContext { test_group_name: &ok.test, tests: Vec::new(), compile_error: true, other_error: false, not_ran: false });
+                    }
+                    Some(s) => {
+                        let mut tests: Vec<Vec<&TestResult>> = Vec::new();
+                        for (_,v) in s {
+                            tests.push(v);
+                        }
+                        all_tests.push(TestGroupContext {test_group_name: &ok.test, tests, compile_error: false, other_error: false, not_ran: false});
+                    }
+                }
+            }
+            Err(e) => {
+                match e {
+                    TestResultError::IOError(_) => {
+                        all_tests.push(TestGroupContext {test_group_name: &tests[i], tests: Vec::new(), compile_error: false, other_error: true, not_ran: false});
+                    }
+                    TestResultError::TestsNotRun => {
+                        all_tests.push(TestGroupContext {test_group_name: &tests[i], tests: Vec::new(), compile_error: false, other_error: false, not_ran: true});
+                    }
+                }
+            }
+        };
+    }
+
     let student_root_file = create_student_index(student, &files, student_template, prev_student, next_student)?;
     fs::write(tmpdir.path().join("index.html"), student_root_file)?;
     for (i, file) in file_paths.iter().enumerate() {
@@ -187,7 +217,7 @@ fn _create_student_report(
             &files[i].java_path,
             code,
             &files,
-            tests,
+            &all_tests,
             prev_student,
             student,
             next_student,
@@ -214,17 +244,27 @@ struct StudentIndexTemplateContext<'a> {
 fn create_student_index(
     student: &str,
     files: &Vec<StudentTemplateFile>,
-    student_template: &TinyTemplate<'_>,
+    handlebars: &Handlebars,
     prev_student: &str,
     next_student: &str
 ) -> Result<String> {
-    student_template.render("student_index_template", &StudentIndexTemplateContext { student, files, prev_student, next_student }).map_err(|e|Error::new(ErrorKind::Other, e))
+    handlebars.render("student_index_template", &StudentIndexTemplateContext { student, files, prev_student, next_student }).map_err(|e|Error::new(ErrorKind::Other, e))
 }
 #[derive(Serialize)]
 struct StudentTemplateContext<'a> {
     file: &'a str,
     files: &'a Vec<StudentTemplateFile>,
-    code: &'a str
+    code: &'a str,
+    all_tests: &'a Vec<TestGroupContext<'a>>
+}
+
+#[derive(Serialize)]
+struct TestGroupContext<'a> {
+    test_group_name: &'a str,
+    tests: Vec<Vec<&'a TestResult>>,
+    compile_error: bool,
+    other_error: bool,
+    not_ran: bool
 }
 
 #[derive(Serialize)]
@@ -237,11 +277,13 @@ fn create_student_report_html(
     file: &str,
     code: String,
     files: &Vec<StudentTemplateFile>,
-    tests: &Vec<String>,
+    test_contexts: &Vec<TestGroupContext>,
     prev_student: &str,
     student: &str,
     next_student: &str,
-    student_template: &TinyTemplate<'_>
+    handlebars: &Handlebars
 ) -> Result<String> {
-    student_template.render("student_template", &StudentTemplateContext { file, files: &files, code: &code }).map_err(|e|Error::new(ErrorKind::Other, e.to_string()))
+    // student_template.render("student_template", &StudentTemplateContext { file, files: &files, code: &code, all_tests: None }).map_err(|e|Error::new(ErrorKind::Other, e.to_string()))
+    // student_template.render("student_template", &StudentTemplateContext { file, files: &files, code: &code, all_tests: test_contexts  }).map_err(|e|Error::new(ErrorKind::Other, e.to_string()))
+    Ok(String::new())
 }

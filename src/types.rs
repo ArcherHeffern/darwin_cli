@@ -50,27 +50,35 @@ impl TestResults {
         )
     }
 
-    pub fn summarize_by_classname(&self) -> Option<HashMap<String, (i32, i32, i32)>> {
+    pub fn group_by_classname(&self) -> Option<HashMap<String, Vec<&TestResult>>> {
         match &self.state {
-            TestState::CompilationError => None,
+            TestState::CompilationError => {
+                return None;
+            },
             TestState::Ok { results } => {
-                let mut m: HashMap<String, (i32, i32, i32)> = HashMap::new();
+                let mut m: HashMap<String, Vec<&TestResult>> = HashMap::new();
                 for result in results.iter() {
-                    if !m.contains_key(&result.classname) {
-                        m.insert(result.classname.clone(), (0, 0, 0));
-                    }
-                    let index = match &result.msg {
-                        StatusMsg::None => 0,
-                        StatusMsg::Error { .. } => 1,
-                        StatusMsg::Failure { .. } => 2,
-                    };
-                    if let Some(entry) = m.get_mut(&result.classname) {
-                        match index {
-                            0 => entry.0 += 1,
-                            1 => entry.1 += 1,
-                            2 => entry.2 += 1,
-                            _ => {} // In case of an unexpected index, do nothing
-                        }
+                    m.entry(result.classname.clone()).and_modify(|e|e.push(result)).or_insert(Vec::new());
+                }
+            }
+        }
+        None
+    }
+
+    pub fn summarize_by_classname(&self) -> Option<HashMap<String, (i32, i32, i32)>> {
+        match self.group_by_classname() {
+            None => None,
+            Some(s) => {
+                let mut m: HashMap<String, (i32, i32, i32)> = HashMap::new();
+                for (_, v) in s.iter() {
+                    for res in v.iter() {
+                        m.entry(res.classname.clone()).and_modify(|item| {
+                            match res.msg {
+                                StatusMsg::None => item.0 += 1,
+                                StatusMsg::Error {..} => item.1 += 1,
+                                StatusMsg::Failure { .. } => item.2 += 1
+                            };
+                        }).or_insert((0, 0, 0));
                     }
                 }
                 Some(m)
@@ -86,7 +94,7 @@ impl TestResults {
 
 #[derive(Debug)]
 #[allow(dead_code)]
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Clone)]
 #[serde(crate = "rocket::serde")]
 pub struct TestResult {
     pub name: String,
@@ -95,7 +103,7 @@ pub struct TestResult {
     pub msg: StatusMsg,
 }
 
-#[derive(Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, PartialEq, Deserialize, Serialize, Clone)]
 #[serde(crate = "rocket::serde")]
 pub enum StatusMsg {
     None,

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,6 +10,7 @@
     <script>hljs.highlightAll();</script>
     <link rel="stylesheet" href="../../styles/student.css">
 </head>
+
 <body>
     <h1>{ file }</h1>
     <!-- File hierarchy -->
@@ -16,9 +18,9 @@
     <div style="display:flex;">
         <section>
             {{ for file in files }}
-                <div>
-                    <a href="./{ file.html_path }">{ file.java_path }</a>
-                </div>
+            <div>
+                <a href="./{ file.html_path }">{ file.java_path }</a>
+            </div>
             {{ endfor }}
         </section>
         <section>
@@ -33,7 +35,36 @@
             tests
         </section>
 
+        <section>
+            {{ for test_group in all_tests }}
+            <div>
+                { test_group.test_group_name }
+
+                {{ if test_group.compile_error }}
+                <p>Compile Error</p>
+                {{ endif }}
+
+                {{ if test_group.other_error }}
+                <p>Other Error</p>
+                {{ endif }}
+
+                {{ if test_group.not_ran }}
+                <p>Not Ran</p>
+                {{ endif }}
+
+                {{ for test in tests_group.tests }}
+                    <div>
+                        { test.name }
+                        { test.classname }
+                    </div>
+
+                {{ endfor }}
+            </div>
+            {{ endfor }}
+        </section>
+
     </div>
-    
+
 </body>
+
 </html>

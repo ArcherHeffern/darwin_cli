@@ -1,16 +1,10 @@
 __Current__
-- Operations that modify state (commands) should be separate from those that retrieve state (queries)
+- Create report to distribute to TA's 
+
+__Later__
 - Parsing of result files
   - What if is run multiple times and fails 3/5? 
   - Can we actually parse the result files? 
-
-__Soon__
-- List all results?
-- Run tests with range
-- Download 
-
-__Later__
-- View code (Simple version before full frontend)
 - Check for plagiarism
 - frontend
 - Locate anomolies: Very large diff, long runnings tests
@@ -21,6 +15,8 @@ __Minor__
 validate create project skel contains pom.xml
 
 __Done__
-
+- Operations that modify state (commands) should be separate from those that retrieve state (queries)
 - CQS: command handler (Printing) -> validation -> core logic
 - Make parallelizable, project/ 
+- Download 
+- List all results
