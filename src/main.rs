@@ -1,9 +1,7 @@
 #[macro_use] extern crate rocket;
 use camino::Utf8PathBuf;
 use clap::{Parser, Subcommand};
-use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::time::Duration;
 use std::{collections::HashSet, fs};
 
 mod commands;
@@ -18,6 +16,7 @@ mod view_student_submission;
 mod server;
 mod clean;
 mod config;
+mod types;
 
 
 #[derive(Parser, Debug)]
@@ -74,78 +73,6 @@ enum SubCommand {
     Clean
 }
 
-#[derive(Debug)]
-struct TestResults {
-    student: String,
-    test: String,
-    results: Vec<TestResult>
-}
-
-impl TestResults {
-    fn summary(&self) -> (usize, usize, usize) {
-        // Correct, errored, failed
-        let num_correct = self.results.iter().filter(|r|r.msg == StatusMsg::None).count();
-        let num_errored = self.results.iter().filter(|r|matches!(r.msg, StatusMsg::Error {..})).count();
-        let num_failed = self.results.iter().filter(|r|matches!(r.msg, StatusMsg::Failure{..})).count();
-        (num_correct, num_errored, num_failed)
-    }
-    fn summarize(&self) -> String {
-        let summary = self.summary();
-        format!("{}_{}: Correct: {}, Errored: {}, Failed: {}", self.student, self.test, summary.0, summary.1, summary.2)
-    }
-
-    fn summarize_by_classname(&self) -> HashMap<String, (i32, i32, i32)> {
-        let mut m: HashMap<String, (i32, i32, i32)> = HashMap::new();
-        for result in self.results.iter() {
-            if !m.contains_key(&result.classname) {
-                m.insert(result.classname.clone(), (0, 0, 0));
-            }
-            let index = match &result.msg {
-                StatusMsg::None => 0,
-                StatusMsg::Error { .. } => 1,
-                StatusMsg::Failure { .. } => 2
-            };
-            if let Some(entry) = m.get_mut(&result.classname) {
-                match index {
-                    0 => entry.0 += 1,
-                    1 => entry.1 += 1,
-                    2 => entry.2 += 1,
-                    _ => {}  // In case of an unexpected index, do nothing
-                }
-            }
-        }
-        m
-    }
-
-    fn print(&self) -> String {
-        let m = self.summarize_by_classname();
-        format!("{}_{} {:?}",self.student, self.test, m)
-    }
-}
-
-#[derive(Debug)]
-#[allow(dead_code)]
-struct TestResult {
-    name: String,
-    classname: String,
-    time: Duration,
-    msg: StatusMsg,
-}
-
-
-#[derive(Debug)]
-#[derive(PartialEq)]
-enum StatusMsg {
-    None,
-    Failure {
-        message: Option<String>,
-        type_: String, 
-    },
-    Error {
-        message: Option<String>,
-        type_: String
-    }
-}
 
 fn main() {
     let mut copy_ignore_set = HashSet::new();

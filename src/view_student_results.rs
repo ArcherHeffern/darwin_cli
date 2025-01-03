@@ -9,16 +9,8 @@ use std::{
 use xml::{attribute::OwnedAttribute, name::OwnedName, reader::XmlEvent, EventReader};
 
 use crate::{
-    list_students::list_students, list_tests::list_tests, util::file_contains_line, StatusMsg,
-    TestResult, TestResults,
+    list_students::list_students, list_tests::list_tests, types::{StatusMsg, TestResult, TestResultError, TestResults, TestState }, util::file_contains_line
 };
-
-#[derive(Debug)]
-pub enum TestResultError {
-    IOError(io::Error),
-    CompilationError,
-    TestsNotRun,
-}
 
 pub fn parse_test_results(
     darwin_path: &Path,
@@ -47,12 +39,14 @@ fn _parse_test_results(
     student: &str,
     test: &str,
 ) -> Result<TestResults, TestResultError> {
+    let mut out = TestResults { student: student.to_string(), test: test.to_string(), state: TestState::CompilationError };
     let compile_error_path = Path::new(darwin_path)
         .join("results")
         .join("compile_errors");
 
     if file_contains_line(&compile_error_path, student).unwrap() {
-        return Err(TestResultError::CompilationError);
+        out.state = TestState::CompilationError;
+        return Ok(out);
     }
 
     let report_path = Path::new(darwin_path)
@@ -62,7 +56,10 @@ fn _parse_test_results(
         return Err(TestResultError::TestsNotRun);
     }
 
-    parse_surefire_report(&report_path, student, test)
+    parse_surefire_report(&report_path, student, test).map(|results|{
+        out.state = TestState::Ok {results};
+        out
+    })
 }
 
 fn get_attr(owned_attributes: &[OwnedAttribute], attr: &str) -> Option<String> {
@@ -78,12 +75,8 @@ fn parse_surefire_report(
     report_path: &Path,
     student: &str,
     test: &str,
-) -> Result<TestResults, TestResultError> {
-    let mut test_results = TestResults {
-        student: student.to_string(),
-        test: test.to_string(),
-        results: Vec::new(),
-    };
+) -> Result<Vec<TestResult>, TestResultError> {
+    let mut out = Vec::new();
 
     let test_results_file = OpenOptions::new().read(true).open(report_path).unwrap();
     let test_results_file = BufReader::new(test_results_file);
@@ -128,13 +121,7 @@ fn parse_surefire_report(
                 }
             }
             Ok(XmlEvent::EndElement { name: _name }) if _name == testcase => {
-                let test_result = TestResult {
-                    name,
-                    classname,
-                    msg,
-                    time,
-                };
-                test_results.results.push(test_result);
+                out.push(TestResult { name, classname, time, msg });
 
                 name = String::new();
                 classname = String::new();
@@ -150,5 +137,5 @@ fn parse_surefire_report(
             _ => {}
         }
     }
-    Ok(test_results)
+    Ok(out)
 }

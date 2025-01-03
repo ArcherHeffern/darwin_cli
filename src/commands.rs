@@ -7,7 +7,7 @@ use std::{
 };
 
 use crate::{
-    clean, create_darwin, download_results, list_students::{self}, list_tests, run_tests::{self}, server, util::prompt_yn, view_student_results::{self, TestResultError}, view_student_submission
+    clean, create_darwin, download_results, list_students::{self}, list_tests, run_tests::{self}, server, types::TestResultError, util::prompt_yn, view_student_results, view_student_submission
 };
 
 pub fn create_darwin(
@@ -86,9 +86,6 @@ pub fn view_student_result(darwin_path: &Path, student: &str, test: &str, summar
         Err(e) => match e {
             TestResultError::IOError(er) => {
                 eprintln!("{}", er);
-            }
-            TestResultError::CompilationError => {
-                eprintln!("Compilation Error");
             }
             TestResultError::TestsNotRun => {
                 eprintln!("Tests have not been run for this student");
