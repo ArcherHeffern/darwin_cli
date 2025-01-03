@@ -1,6 +1,4 @@
 __Current__
-- Create darwin remove print statements and whatnot. 
-- CQS: command handler (Printing) -> validation -> core logic
 - Operations that modify state (commands) should be separate from those that retrieve state (queries)
 - Parsing of result files
   - What if is run multiple times and fails 3/5? 
@@ -13,7 +11,6 @@ __Soon__
 
 __Later__
 - View code (Simple version before full frontend)
-- Make parallelizable, project/ 
 - Check for plagiarism
 - frontend
 - Locate anomolies: Very large diff, long runnings tests
@@ -21,4 +18,9 @@ __Later__
 
 __Minor__
 - Remove all files and directories from project that do not belong
-- Validate create-project input is dir and zipfile
+validate create project skel contains pom.xml
+
+__Done__
+
+- CQS: command handler (Printing) -> validation -> core logic
+- Make parallelizable, project/ 

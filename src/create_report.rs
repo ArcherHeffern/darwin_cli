@@ -1,7 +1,7 @@
 use std::{
     fs::{self, create_dir, remove_dir_all},
     io::{Error, ErrorKind, Result},
-    path::Path},
+    path::Path,
 };
 
 use serde::Serialize;
