@@ -6,10 +6,9 @@ use std::{
 };
 use threadpool::ThreadPool;
 
-use crate::util::{initialize_project, is_student, is_test, set_active_project, to_diff_path};
+use crate::{config::{compile_errors_file, darwin_root, diff_dir, student_diff_file, student_project_file, student_result_file, tests_ran_file}, util::{file_append_line, initialize_project, is_student, is_test, set_active_project}};
 
 pub fn concurrent_run_tests(
-    darwin_path: &Path,
     test: &str,
     num_threads: usize,
     on_thread_start: fn(&str),
@@ -24,7 +23,6 @@ pub fn concurrent_run_tests(
     }
 
     _concurrent_run_tests(
-        darwin_path,
         test,
         num_threads,
         on_thread_start,
@@ -34,7 +32,6 @@ pub fn concurrent_run_tests(
 }
 
 fn _concurrent_run_tests(
-    darwin_path: &Path,
     test: &str,
     num_threads: usize,
     on_thread_start: fn(&str),
@@ -43,15 +40,14 @@ fn _concurrent_run_tests(
 ) -> io::Result<()> {
     let threadpool = ThreadPool::new(num_threads);
 
-    for diff_path in darwin_path.join("submission_diffs").read_dir()? {
+    for diff_path in diff_dir().read_dir()? {
         let diff_path = diff_path.unwrap();
         let student = diff_path.file_name().into_string().expect("?");
-        let darwin_path_clone = darwin_path.to_path_buf();
         let test_clone = test.to_string();
         threadpool.execute(move || {
             on_thread_start(&student);
             // let darwin_path_clone = darwin_path.to_pat
-            match run_test_for_student(darwin_path_clone.as_path(), &student, &test_clone) {
+            match run_test_for_student(&student, &test_clone) {
                 Ok(()) => {
                     on_thread_end(&student);
                 }
@@ -62,16 +58,12 @@ fn _concurrent_run_tests(
         })
     }
     threadpool.join();
-    let mut f = OpenOptions::new()
-        .append(true)
-        .open(darwin_path.join("tests_ran"))?;
-    writeln!(f, "{}", test)?;
-    Ok(())
+    file_append_line(&tests_ran_file(), test)
 }
 
-pub fn run_test_for_student(darwin_path: &Path, student: &str, test: &str) -> Result<()> {
+pub fn run_test_for_student(student: &str, test: &str) -> Result<()> {
     // Validate Inputs
-    if !darwin_path.is_dir() {
+    if !darwin_root().is_dir() {
         return Err(Error::new(
             ErrorKind::AlreadyExists,
             "darwin project not initialized in this directory",
@@ -83,7 +75,7 @@ pub fn run_test_for_student(darwin_path: &Path, student: &str, test: &str) -> Re
             format!("Test '{}' was not found", test),
         ));
     }
-    if !is_student(darwin_path, student) {
+    if !is_student(student) {
         return Err(Error::new(
             ErrorKind::InvalidInput,
             format!("Student '{}' was not found", student),
@@ -91,24 +83,21 @@ pub fn run_test_for_student(darwin_path: &Path, student: &str, test: &str) -> Re
     }
 
     // Validate state of .darwin and perform clean up
-    let project_path = Path::new(darwin_path).join("projects").join(student);
-    if project_path.is_dir() {
-        remove_dir_all(&project_path)?;
-    } else if project_path.is_file() {
-        remove_file(&project_path)?;
+    let student_project_path = student_project_file(student);
+    if student_project_path.is_dir() {
+        remove_dir_all(&student_project_path)?;
+    } else if student_project_path.is_file() {
+        remove_file(&student_project_path)?;
     }
 
     // Don't recompute
-    let dest_file = darwin_path
-        .join("results")
-        .join(format!("{}_{}", student, test));
+    let dest_file = student_result_file(student, test);
     if dest_file.exists() {
         return Ok(());
     }
 
     _run_test_for_student(
-        darwin_path,
-        project_path.as_path(),
+        student_project_path.as_path(),
         student,
         test,
         dest_file.as_path(),
@@ -116,17 +105,16 @@ pub fn run_test_for_student(darwin_path: &Path, student: &str, test: &str) -> Re
 }
 
 fn _run_test_for_student(
-    darwin_path: &Path,
     project_path: &Path,
     student: &str,
     test: &str,
     dest_file: &Path,
 ) -> Result<()> {
-    let diff_path = to_diff_path(darwin_path, student);
+    let diff_path = student_diff_file(student);
     initialize_project(project_path)?;
     set_active_project(project_path, diff_path.as_path())?;
     if let Err(e) = compile(project_path) {
-        let compile_error_path = darwin_path.join("results").join("compile_errors");
+        let compile_error_path = compile_errors_file();
         let mut compile_error_file = OpenOptions::new()
             .read(true)
             .append(true)

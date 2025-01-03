@@ -9,11 +9,10 @@ use std::{
 use xml::{attribute::OwnedAttribute, name::OwnedName, reader::XmlEvent, EventReader};
 
 use crate::{
-    list_students::list_students, list_tests::list_tests, types::{StatusMsg, TestResult, TestResultError, TestResults, TestState }, util::file_contains_line
+    config::{compile_errors_file, student_result_file}, list_students::list_students, list_tests::list_tests, types::{StatusMsg, TestResult, TestResultError, TestResults, TestState }, util::file_contains_line
 };
 
 pub fn parse_test_results(
-    darwin_path: &Path,
     student: &str,
     test: &str,
 ) -> Result<TestResults, TestResultError> {
@@ -31,32 +30,26 @@ pub fn parse_test_results(
         )));
     }
 
-    _parse_test_results(darwin_path, student, test)
+    _parse_test_results(student, test)
 }
 
 fn _parse_test_results(
-    darwin_path: &Path,
     student: &str,
     test: &str,
 ) -> Result<TestResults, TestResultError> {
     let mut out = TestResults { student: student.to_string(), test: test.to_string(), state: TestState::CompilationError };
-    let compile_error_path = Path::new(darwin_path)
-        .join("results")
-        .join("compile_errors");
 
-    if file_contains_line(&compile_error_path, student).unwrap() {
+    if file_contains_line(&compile_errors_file(), student).unwrap() {
         out.state = TestState::CompilationError;
         return Ok(out);
     }
 
-    let report_path = Path::new(darwin_path)
-        .join("results")
-        .join(format!("{}_{}", student, test));
-    if !report_path.is_file() {
+    let result_file = student_result_file(student, test);
+    if !result_file.is_file() {
         return Err(TestResultError::TestsNotRun);
     }
 
-    parse_surefire_report(&report_path, student, test).map(|results|{
+    parse_surefire_report(&result_file, student, test).map(|results| {
         out.state = TestState::Ok {results};
         out
     })

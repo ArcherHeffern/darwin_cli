@@ -9,7 +9,7 @@ pub fn list_tests() -> HashSet<String> {
 
     let mut out = HashSet::new();
     for file in files {
-        if !file.extension().map_or(true, |ext| ext != "java") {
+        if file.extension().map_or(false, |ext| ext != "java") {
             continue;
         }
         let file = file.strip_prefix(test_dir_str).unwrap();

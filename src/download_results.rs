@@ -5,11 +5,10 @@ use crate::{
 };
 
 pub fn download_results_summary(
-    darwin_path: &Path,
-    f: File,
+    outfile: File,
     test: &str,
 ) -> Result<()> {
-    let f = BufWriter::new(f);
+    let f = BufWriter::new(outfile);
     let mut wtr = csv::Writer::from_writer(f);
     let headers = vec![
         String::from("Name"),
@@ -23,7 +22,7 @@ pub fn download_results_summary(
     for student in list_students() {
         let mut cur_row = vec![String::new(); headers.len()];
         cur_row[0] = student.clone();
-        match parse_test_results(darwin_path, &student, test) {
+        match parse_test_results(&student, test) {
             Ok(res) => {
                 let summary = res.summary();
                 if summary.0 {
@@ -49,7 +48,6 @@ pub fn download_results_summary(
 }
 
 pub fn download_results_by_classname(
-    darwin_path: &Path,
     out_file: &Path,
     test: &str,
 ) -> Result<()> {
@@ -71,7 +69,7 @@ pub fn download_results_by_classname(
     for student in list_students() {
         let mut cur_row = vec![String::new(); headers.len()];
         cur_row[0] = student.clone();
-        match parse_test_results(darwin_path, &student, test) {
+        match parse_test_results(&student, test) {
             Ok(res) => {
                 let summary = res.summarize_by_classname();
                 match summary {

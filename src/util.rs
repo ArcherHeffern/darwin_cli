@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-use std::fs::{self, create_dir, create_dir_all};
+use std::fs::{self, create_dir, create_dir_all, OpenOptions};
 use std::io::{copy, prelude::*, BufReader, BufWriter, Error, ErrorKind, Result};
 use std::os::unix::fs::symlink;
 use std::path::PathBuf;
@@ -114,10 +114,6 @@ pub fn extract_directory_from_zip(
     Ok(())
 }
 
-pub fn to_diff_path(darwin_path: &Path, student_name: &str) -> PathBuf {
-    darwin_path.join("submission_diffs").join(student_name)
-}
-
 pub fn create_diff(original: &Path, deviant: &Path, dest_path: &Path) -> Result<()> {
     // Truncates dest_path if it exists
 
@@ -164,7 +160,7 @@ pub fn is_test(test: &str) -> bool {
     list_tests::list_tests().contains(test)
 }
 
-pub fn is_student(darwin_path: &Path, student: &str) -> bool {
+pub fn is_student(student: &str) -> bool {
     list_students::list_students()
         .iter()
         .any(|s| s == student)
@@ -266,4 +262,12 @@ pub fn file_contains_line(file: &Path, line: &str) -> Result<bool> {
             }
         }
     }
+}
+
+pub fn file_append_line(file: &Path, line: &str) -> Result<()> {
+    let mut f = OpenOptions::new()
+        .append(true)
+        .open(file)?;
+    writeln!(f, "{}", line)?;
+    Ok(())
 }

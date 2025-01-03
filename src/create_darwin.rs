@@ -1,6 +1,7 @@
+use crate::config::{compile_errors_file, darwin_root, diff_dir, main_dir, projects_dir, results_dir, student_diff_file, test_dir, tests_ran_file};
 use crate::util::{self, create_diff};
 use io::prelude::*;
-use std::fs::{remove_dir_all, File};
+use std::fs::{remove_dir_all, File, OpenOptions};
 use std::io::{self, copy, BufReader, BufWriter, Error, ErrorKind, Result};
 use std::{collections::HashSet, fs, path::Path};
 use tempfile::{tempdir, tempfile};
@@ -8,12 +9,11 @@ use zip::result::ZipError;
 use zip::ZipArchive;
 
 pub fn create_darwin(
-    darwin_path: &Path,
     project_skeleton: &Path,
     moodle_submissions_zipfile: &Path,
     copy_ignore_set: &HashSet<&str>,
 ) -> Result<()> {
-    if darwin_path.exists() {
+    if darwin_root().exists() {
         return Err(Error::new(
             ErrorKind::AlreadyExists,
             "darwin project already exists in this directory",
@@ -42,51 +42,48 @@ pub fn create_darwin(
     }
 
     let status = _create_darwin(
-        darwin_path,
         project_skeleton,
         moodle_submissions_zipfile,
         copy_ignore_set,
     );
 
-    if status.is_err() && darwin_path.is_dir() {
-        remove_dir_all(darwin_path)?;
+    if status.is_err() && darwin_root().is_dir() {
+        remove_dir_all(darwin_root())?;
     }
 
     status
 }
 
 fn _create_darwin(
-    darwin_path: &Path,
     skeleton_path: &Path,
     submission_zipfile_path: &Path,
     copy_ignore_set: &HashSet<&str>,
 ) -> Result<()> {
-    fs::create_dir(darwin_path)?;
-    fs::create_dir(darwin_path.join("submission_diffs"))?;
-    fs::create_dir(darwin_path.join("main"))?;
-    fs::create_dir(darwin_path.join("test"))?;
-    fs::create_dir(darwin_path.join("projects"))?;
-    fs::create_dir(darwin_path.join("results"))?;
-    File::create(darwin_path.join("tests_ran"))?;
-    File::create(darwin_path.join("results").join("compile_errors"))?;
+    fs::create_dir_all(darwin_root())?;
+    fs::create_dir_all(diff_dir())?;
+    fs::create_dir_all(main_dir())?;
+    fs::create_dir_all(test_dir())?;
+    fs::create_dir_all(projects_dir())?;
+    fs::create_dir_all(results_dir())?;
+    File::create(tests_ran_file())?; // Possible error for this and below line if the leading paths don't exist. 
+    File::create(compile_errors_file())?;
     fs::copy(
         skeleton_path.join("pom.xml"),
-        darwin_path.join("main").join("pom.xml"),
+        main_dir().join("pom.xml"),
     )?;
 
     util::copy_dir_all(
         skeleton_path.join("src").join("main"),
-        darwin_path.join("main"),
+        main_dir(),
         copy_ignore_set,
     )?;
     util::copy_dir_all(
         skeleton_path.join("src").join("test"),
-        darwin_path.join("test"),
+        test_dir(),
         copy_ignore_set,
     )?;
 
     submissions_to_diffs(
-        darwin_path,
         submission_zipfile_path,
         copy_ignore_set,
         |s, e| eprintln!("Error extracting {}'s submission: {}", s, e),
@@ -96,7 +93,6 @@ fn _create_darwin(
 }
 
 fn submissions_to_diffs(
-    darwin_path: &Path,
     submission_zipfile_path: &Path,
     file_ignore_set: &HashSet<&str>,
     on_submission_extraction_error: fn(&str, Error), // Student name
@@ -116,7 +112,6 @@ fn submissions_to_diffs(
         let student_name = &file_name[0..file_name.find('_').expect("Moodle submission zipfile must delimit all contained student submission zipfiles with '_'. Perhaps moodle changed its naming scheme or this isn't a moodle submission zipfile.")];
 
         if let Err(e) = submission_to_diff(
-            darwin_path,
             &file_name,
             &mut zip,
             student_name,
@@ -130,7 +125,6 @@ fn submissions_to_diffs(
 }
 
 fn submission_to_diff(
-    darwin_path: &Path,
     file_name: &str,
     zip: &mut ZipArchive<File>,
     student_name: &str,
@@ -166,10 +160,8 @@ fn submission_to_diff(
         ));
     }
 
-    let original = darwin_path.join("main");
     let deviant = src_main_dir.path();
-    let dest_path = darwin_path.join("submission_diffs").join(student_name);
-    create_diff(original.as_path(), deviant, dest_path.as_path())
+    create_diff(&main_dir(), deviant, &student_diff_file(student_name))
 }
 
 fn extract_student_submission(

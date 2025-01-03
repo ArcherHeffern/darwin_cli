@@ -7,28 +7,26 @@ use std::{
 };
 
 use crate::{
-    clean, create_darwin, create_report, download_results, list_students::{self}, list_tests, run_tests::{self}, server, types::TestResultError, util::prompt_yn, view_student_results, view_student_submission
+    clean, config::darwin_root, create_darwin, create_report, download_results, list_students::{self}, list_tests, run_tests::{self}, server, types::TestResultError, util::prompt_yn, view_student_results, view_student_submission
 };
 
 pub fn create_darwin(
-    darwin_path: &Path,
     project_skeleton: &Path,
     moodle_submissions_zipfile: &Path,
     copy_ignore_set: &HashSet<&str>,
 ) {
-    if darwin_path.exists() {
+    if darwin_root().exists() {
         if prompt_yn("Darwin project already exists in this directory. Override? (y/n)")
             .unwrap_or(false)
         {
             return;
         }
-        if remove_dir_all(darwin_path).is_err() {
+        if remove_dir_all(darwin_root()).is_err() {
             eprintln!("Failed to delete darwin project");
             return;
         }
     }
     if let Err(e) = create_darwin::create_darwin(
-        darwin_path,
         project_skeleton,
         moodle_submissions_zipfile,
         copy_ignore_set,
@@ -49,8 +47,8 @@ pub fn list_tests() {
     }
 }
 
-pub fn run_test_for_student(darwin_path: &Path, student: &str, test: &str) {
-    match run_tests::run_test_for_student(darwin_path, student, test) {
+pub fn run_test_for_student(student: &str, test: &str) {
+    match run_tests::run_test_for_student(student, test) {
         Ok(()) => {}
         Err(e) => {
             eprintln!("{}", e);
@@ -58,9 +56,8 @@ pub fn run_test_for_student(darwin_path: &Path, student: &str, test: &str) {
     }
 }
 
-pub fn run_tests(darwin_path: &Path, test: &str, num_threads: usize) {
+pub fn run_tests(test: &str, num_threads: usize) {
     match run_tests::concurrent_run_tests(
-        darwin_path,
         test,
         num_threads,
         |s| println!("Processing: {}", s),
@@ -74,8 +71,8 @@ pub fn run_tests(darwin_path: &Path, test: &str, num_threads: usize) {
     }
 }
 
-pub fn view_student_result(darwin_path: &Path, student: &str, test: &str, summarize: bool) {
-    match view_student_results::parse_test_results(darwin_path, student, test) {
+pub fn view_student_result(student: &str, test: &str, summarize: bool) {
+    match view_student_results::parse_test_results(student, test) {
         Ok(result) => {
             if summarize {
                 println!("{}", result.summarize());
@@ -94,7 +91,7 @@ pub fn view_student_result(darwin_path: &Path, student: &str, test: &str, summar
     }
 }
 
-pub fn view_all_results(darwin_path: &Path, test: &str, summarize: bool) {
+pub fn view_all_results(test: &str, summarize: bool) {
     if !list_tests::list_tests().contains(test) {
         eprintln!("Test '{}' not recognized", test);
         return;
@@ -103,11 +100,11 @@ pub fn view_all_results(darwin_path: &Path, test: &str, summarize: bool) {
         .iter()
         .for_each(|student| {
             println!("Processing '{}'", student);
-            view_student_result(darwin_path, student, test, summarize);
+            view_student_result(student, test, summarize);
         });
 }
 
-pub fn download_results_summary(darwin_path: &Path, test: &str, outfile: &str) {
+pub fn download_results_summary(test: &str, outfile: &str) {
     let out_file_path = Path::new(outfile);
     if out_file_path.exists() {
         println!("{} Exists. Continue? (Y/N)", outfile);
@@ -124,9 +121,9 @@ pub fn download_results_summary(darwin_path: &Path, test: &str, outfile: &str) {
         .create(true)
         .open(out_file_path)
         .unwrap();
-    download_results::download_results_summary(darwin_path, out_file, test).unwrap();
+    download_results::download_results_summary(out_file, test).unwrap();
 }
-pub fn download_results_by_classname(darwin_path: &Path, test: &str, outfile: &str) {
+pub fn download_results_by_classname(test: &str, outfile: &str) {
     let out_file = Path::new(outfile);
     if out_file.exists() {
         println!("{} Exists. Continue? (Y/N)", outfile);
@@ -137,10 +134,10 @@ pub fn download_results_by_classname(darwin_path: &Path, test: &str, outfile: &s
             exit(0);
         }
     }
-    download_results::download_results_by_classname(darwin_path, out_file, test).unwrap();
+    download_results::download_results_by_classname(out_file, test).unwrap();
 }
 
-pub fn view_student_submission(darwin_path: &Path, student: &str) {
+pub fn view_student_submission(student: &str) {
 
     let dest = Path::new(student);
     if dest.exists() {
@@ -160,12 +157,12 @@ pub fn view_student_submission(darwin_path: &Path, student: &str) {
         return;
     }
 
-    if let Err(e) = view_student_submission::view_student_submission(darwin_path, student, dest) {
+    if let Err(e) = view_student_submission::view_student_submission(student, dest) {
         eprintln!("Error viewing student submission: {}", e);
     };
 }
 
-pub fn create_report(darwin_path: &Path, report_path: &Path, tests: &Vec<String>) {
+pub fn create_report(report_path: &Path, tests: &Vec<String>) {
     if report_path.exists() {
         println!("'{:?}' Exists. Continue? (Y/N)", report_path);
         let mut s = String::new();
@@ -182,9 +179,9 @@ pub fn create_report(darwin_path: &Path, report_path: &Path, tests: &Vec<String>
     } else if report_path.is_dir() && remove_dir_all(report_path).is_err() {
         eprintln!("Failed to remove {:?}", report_path);
         return;
-    }
+    } 
 
-    match create_report::create_report(darwin_path, report_path, tests) {
+    match create_report::create_report(report_path, tests) {
         Ok(()) => {
             println!("Report generated");
         }

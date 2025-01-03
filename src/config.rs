@@ -36,3 +36,11 @@ pub fn compile_errors_file() -> PathBuf {
 pub fn test_dir() -> PathBuf {
     darwin_root().join("test")
 }
+
+pub fn student_result_file(student: &str, test: &str) -> PathBuf {
+    results_dir().join(format!("{}_{}", student, test))
+}
+
+pub fn main_dir() -> PathBuf {
+    darwin_root().join("main")
+}

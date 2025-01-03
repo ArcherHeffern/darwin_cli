@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use rocket::{response::status, serde::json::Json, http::Status};
 
-use crate::{config::darwin_root, list_students::list_students, list_tests::list_tests, types::{TestResultError, TestResults}, view_student_results::parse_test_results};
+use crate::{list_students::list_students, list_tests::list_tests, types::{TestResultError, TestResults}, view_student_results::parse_test_results};
 
 #[rocket::main]
 pub async fn server() -> std::result::Result<(), rocket::Error> {
@@ -25,7 +25,7 @@ fn get_tests() -> Json<HashSet<String>> {
 
 #[get("/result/<student>/<test>")]
 fn get_student_result(student: &str, test: &str) -> Result<Json<TestResults>, status::Custom<String>> {
-    match parse_test_results(darwin_root().as_path(), student, test) {
+    match parse_test_results(student, test) {
         Ok(r) => Ok(Json(r)),
         Err(e) => match e {
             TestResultError::IOError(e) => {
