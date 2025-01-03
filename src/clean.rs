@@ -1,20 +1,21 @@
 use std::{
     fs::{create_dir, remove_dir_all, File, OpenOptions},
-    io,
-    path::Path,
+    io
 };
 
-pub fn clean(darwin_path: &Path) -> io::Result<()> {
-    remove_dir_all(darwin_path.join("projects"))?;
-    create_dir(darwin_path.join("projects"))?;
-    remove_dir_all(darwin_path.join("results"))?;
-    create_dir(darwin_path.join("results"))?;
+use crate::config::{compile_errors_file, projects_dir, results_dir, tests_ran_file};
+
+pub fn clean() -> io::Result<()> {
+    remove_dir_all(projects_dir())?;
+    create_dir(projects_dir())?;
+    remove_dir_all(results_dir())?;
+    create_dir(results_dir())?;
     OpenOptions::new()
         .create(true)
         .read(true)
         .write(true)
         .truncate(true)
-        .open(darwin_path.join("results").join("compile_errors"))?;
-    File::create(darwin_path.join("tests_ran"))?;
+        .open(compile_errors_file())?;
+    File::create(tests_ran_file())?;
     Ok(())
 }

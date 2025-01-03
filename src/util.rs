@@ -9,7 +9,7 @@ use std::{fs::File, io, path::Path};
 use zip::result::ZipError;
 use zip::ZipArchive;
 
-use crate::config::darwin_path;
+use crate::config::darwin_root;
 use crate::{list_students, list_tests};
 
 pub fn prompt_yn(prompt: &str) -> Result<bool> {
@@ -159,13 +159,13 @@ fn _create_diff(original: &Path, deviant: &Path, dest_path: &Path) -> Result<()>
     Ok(())
 }
 
-pub fn is_test(darwin_path: &Path, test: &str) -> bool {
+pub fn is_test(test: &str) -> bool {
     // validate list of tests is comma separated and all exist
-    list_tests::list_tests(darwin_path).contains(test)
+    list_tests::list_tests().contains(test)
 }
 
 pub fn is_student(darwin_path: &Path, student: &str) -> bool {
-    list_students::list_students(darwin_path)
+    list_students::list_students()
         .iter()
         .any(|s| s == student)
 }
@@ -174,18 +174,18 @@ pub fn initialize_project(project_path: &Path) -> Result<()> {
     // Invariants:
     // - darwin_path is an existing .darwin project root directory
     // - project_path does not exist
-    assert!(darwin_path().is_dir());
+    assert!(darwin_root().is_dir());
     assert!(!project_path.exists());
 
     create_dir_all(project_path)?;
     create_dir(project_path.join("src"))?;
     copy_dir_all(
-        darwin_path().join("main"),
+        darwin_root().join("main"),
         project_path.join("src").join("main"),
         &HashSet::new(),
     )?;
     symlink(
-        darwin_path().join("test").canonicalize()?,
+        darwin_root().join("test").canonicalize()?,
         project_path.join("src").join("test"),
     )?;
 
@@ -196,12 +196,12 @@ pub fn set_active_project(project_path: &Path, diff_path: &Path) -> Result<()> {
     // Invariants:
     // - darwin_path is an existing .darwin project root directory
     // - project_path is an existing, newly initialized project directory
-    assert!(darwin_path().is_dir());
+    assert!(darwin_root().is_dir());
     assert!(project_path.is_dir());
 
     let project_main_path = project_path.join("src").join("main");
     patch(
-        darwin_path().join("main").as_path(),
+        darwin_root().join("main").as_path(),
         diff_path,
         project_main_path.as_path(),
     )?;

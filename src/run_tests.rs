@@ -16,7 +16,7 @@ pub fn concurrent_run_tests(
     on_thread_err: fn(&str, Error),
     on_thread_end: fn(&str),
 ) -> Result<()> {
-    if !is_test(darwin_path, test) {
+    if !is_test(test) {
         return Err(io::Error::new(
             ErrorKind::NotFound,
             format!("Test {} not recognized", test),
@@ -77,7 +77,7 @@ pub fn run_test_for_student(darwin_path: &Path, student: &str, test: &str) -> Re
             "darwin project not initialized in this directory",
         ));
     }
-    if !is_test(darwin_path, test) {
+    if !is_test(test) {
         return Err(Error::new(
             ErrorKind::InvalidInput,
             format!("Test '{}' was not found", test),

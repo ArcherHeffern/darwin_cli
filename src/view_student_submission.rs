@@ -8,7 +8,7 @@ pub fn view_student_submission(darwin_path: &Path, student: &str, dest: &Path) -
     // Enforces:
     // student exists
     // dest does not exist
-    if !list_students::list_students(darwin_path)
+    if !list_students::list_students()
         .iter()
         .any(|s| s == student)
     {

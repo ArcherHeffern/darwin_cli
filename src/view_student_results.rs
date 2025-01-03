@@ -17,14 +17,14 @@ pub fn parse_test_results(
     student: &str,
     test: &str,
 ) -> Result<TestResults, TestResultError> {
-    if !list_students(darwin_path).iter().any(|s| s == student) {
+    if !list_students().iter().any(|s| s == student) {
         return Err(TestResultError::IOError(io::Error::new(
             io::ErrorKind::NotFound,
             format!("Student {} not recognized", student),
         )));
     }
 
-    if !list_tests(darwin_path).contains(test) {
+    if !list_tests().contains(test) {
         return Err(TestResultError::IOError(io::Error::new(
             io::ErrorKind::NotFound,
             format!("Test {} not recognized", test),

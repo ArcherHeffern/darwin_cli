@@ -1,15 +1,15 @@
-use std::{collections::HashSet, path::Path};
+use std::collections::HashSet;
 
-use crate::util::list_files_recursively;
+use crate::{config::test_dir, util::list_files_recursively};
 
-pub fn list_tests(darwin_path: &Path) -> HashSet<String> {
-    let test_dir = darwin_path.join("test").join("java");
+pub fn list_tests() -> HashSet<String> {
+    let test_dir = test_dir().join("java");
     let test_dir_str = test_dir.to_str().unwrap();
     let files = list_files_recursively(&test_dir);
 
     let mut out = HashSet::new();
     for file in files {
-        if !file.extension().map_or(true, |ext| ext != ".java") {
+        if !file.extension().map_or(true, |ext| ext != "java") {
             continue;
         }
         let file = file.strip_prefix(test_dir_str).unwrap();

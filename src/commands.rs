@@ -37,14 +37,14 @@ pub fn create_darwin(
     }
 }
 
-pub fn list_students(darwin_path: &Path) {
-    for student in list_students::list_students(darwin_path) {
+pub fn list_students() {
+    for student in list_students::list_students() {
         println!("{}", student);
     }
 }
 
-pub fn list_tests(darwin_path: &Path) {
-    for test in crate::list_tests::list_tests(darwin_path) {
+pub fn list_tests() {
+    for test in crate::list_tests::list_tests() {
         println!("{}", test);
     }
 }
@@ -95,11 +95,11 @@ pub fn view_student_result(darwin_path: &Path, student: &str, test: &str, summar
 }
 
 pub fn view_all_results(darwin_path: &Path, test: &str, summarize: bool) {
-    if !list_tests::list_tests(darwin_path).contains(test) {
+    if !list_tests::list_tests().contains(test) {
         eprintln!("Test '{}' not recognized", test);
         return;
     }
-    list_students::list_students(darwin_path)
+    list_students::list_students()
         .iter()
         .for_each(|student| {
             println!("Processing '{}'", student);
@@ -201,8 +201,8 @@ pub fn server() {
     println!("Done");
 }
 
-pub fn clean(darwin_path: &Path) {
-    if let Err(e) = clean::clean(darwin_path) {
+pub fn clean() {
+    if let Err(e) = clean::clean() {
         eprintln!("Error cleaning: {}", e);
     }
 }

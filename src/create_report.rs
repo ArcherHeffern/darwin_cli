@@ -3,7 +3,7 @@ use std::{fs::{self, create_dir, remove_dir, remove_dir_all}, io::{Error, ErrorK
 use serde::Serialize;
 use tinytemplate::TinyTemplate;
 
-use crate::{config::{student_diff_path, student_project_path, tests_ran_path}, list_students::list_students, list_tests::list_tests, util::{file_contains_line, initialize_project, set_active_project}};
+use crate::{config::{student_diff_file, student_project_file, tests_ran_file}, list_students::list_students, list_tests::list_tests, util::{file_contains_line, initialize_project, set_active_project}};
 
 
 pub fn create_report(darwin_path: &Path, report_path: &Path, tests: &Vec<String>) -> Result<()> {
@@ -13,12 +13,12 @@ pub fn create_report(darwin_path: &Path, report_path: &Path, tests: &Vec<String>
     if report_path.exists() {
         return Err(Error::new(ErrorKind::AlreadyExists, "report_path exists"));
     }
-    let actual_tests = list_tests(darwin_path);
+    let actual_tests = list_tests();
     for test in tests {
         if !actual_tests.contains(test) {
             return Err(Error::new(ErrorKind::NotFound, format!("{} is not a test", test)))
         }
-        if !file_contains_line(&tests_ran_path(), test)? {
+        if !file_contains_line(&tests_ran_file(), test)? {
             println!("Warning! {} is a test but it wasn't run for all students", test);
             // return Err(Error::new(ErrorKind::NotFound, format!("{} is a test but wasn't run for all students", test)))
         }
@@ -33,7 +33,7 @@ pub fn create_report(darwin_path: &Path, report_path: &Path, tests: &Vec<String>
 
 fn _create_report(darwin_path: &Path, report_path: &Path, tests: &Vec<String>) -> Result<()> {
     create_dir(report_path)?;
-    let students = list_students(darwin_path);
+    let students = list_students();
     if students.is_empty() {
         return Ok(());
     }
@@ -64,8 +64,8 @@ fn create_report_student_list(dest: &Path, students: &[String]) -> Result<()> {
 }
 
 fn create_student_report(report_root: &Path, tests: &Vec<String>, prev_student: &str, student: &str, next_student: &str) -> Result<()> {
-    let project_path = student_project_path(student);
-    let diff_path = student_diff_path(student);
+    let project_path = student_project_file(student);
+    let diff_path = student_diff_file(student);
     remove_dir_all(&project_path)?;
     initialize_project(&project_path)?;
     set_active_project(&project_path, &diff_path)?;

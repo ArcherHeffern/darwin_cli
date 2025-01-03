@@ -1,6 +1,7 @@
 #[macro_use] extern crate rocket;
 use camino::Utf8PathBuf;
 use clap::{Parser, Subcommand};
+use config::darwin_root;
 use std::path::{Path, PathBuf};
 use std::{collections::HashSet, fs};
 
@@ -84,7 +85,7 @@ fn main() {
     copy_ignore_set.insert(".DS_Store");
     copy_ignore_set.insert(".gitignore");
 
-    let darwin_path: PathBuf = config::darwin_path();
+    let darwin_path: PathBuf = config::darwin_root();
     let darwin_path: &Path = darwin_path.as_path();
 
     let cli = Args::parse();
@@ -109,13 +110,13 @@ fn main() {
             );
         }
         SubCommand::DeleteProject => {
-            fs::remove_dir_all(darwin_path).unwrap();
+            fs::remove_dir_all(darwin_root()).unwrap();
         }
         SubCommand::ListTests => {
-            commands::list_tests(darwin_path);
+            commands::list_tests();
         }
         SubCommand::ListStudents => {
-            commands::list_students(darwin_path);
+            commands::list_students();
         }
         SubCommand::TestStudent { student, tests } => {
             commands::run_test_for_student(
@@ -159,7 +160,7 @@ fn main() {
             commands::server();
         }
         SubCommand::Clean  => {
-            commands::clean(darwin_path);
+            commands::clean();
         }
     }
 }

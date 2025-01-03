@@ -20,7 +20,7 @@ pub fn download_results_summary(
     ];
 
     wtr.write_record(&headers)?;
-    for student in list_students(darwin_path) {
+    for student in list_students() {
         let mut cur_row = vec![String::new(); headers.len()];
         cur_row[0] = student.clone();
         match parse_test_results(darwin_path, &student, test) {
@@ -60,7 +60,7 @@ pub fn download_results_by_classname(
         .open(out_file)?;
     let out_file = BufWriter::new(out_file);
     let mut wtr = csv::Writer::from_writer(out_file);
-    let tests = list_tests(darwin_path);
+    let tests = list_tests();
     let mut headers = vec![String::from("Name"), String::from("Error")];
     for test in tests {
         headers.push(test);
@@ -68,7 +68,7 @@ pub fn download_results_by_classname(
 
     wtr.write_record(&headers)?;
 
-    for student in list_students(darwin_path) {
+    for student in list_students() {
         let mut cur_row = vec![String::new(); headers.len()];
         cur_row[0] = student.clone();
         match parse_test_results(darwin_path, &student, test) {
