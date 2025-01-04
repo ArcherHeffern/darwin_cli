@@ -17,10 +17,11 @@
 <body>
     <header>
         <div class="left">
-            <button onclick="window.location.href=../../index.html" id="back-button">Student List</button>
+            <button id="back-button" onclick="window.location.href='../../index.html'">Student List</button>
             <button id="left-sidebar-button">Toggle File List</button>
             <button id="right-sidebar-button">Toggle Test Results</button>
             <button id="bottom-sidebar-button">Toggle Tests</button>
+            <button id="open-tests" onclick="window.open('../../tests.html', '_blank')">Tests</button>
         </div>
         <div class="middle">
             <h1>{{student}}</h1>

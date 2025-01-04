@@ -55,7 +55,8 @@ header {
 #back-button,
 #left-sidebar-button,
 #bottom-sidebar-button,
-#right-sidebar-button {
+#right-sidebar-button,
+#open-tests {
     border: none;
     cursor: pointer; /* Pointer cursor on hover */
     background-color:transparent;
