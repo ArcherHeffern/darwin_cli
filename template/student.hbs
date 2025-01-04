@@ -46,9 +46,9 @@
         </div>
         <div id="right-sidebar" class="open">
                 {{#each test_contexts}}
-                    <p>
+                    <h3>
                         {{this.test_package_name}}
-                    </p>
+                    </h3>
                     {{#if this.compile_error}}
                         <p>Compile Error</p>
                     {{/if}}
@@ -63,28 +63,33 @@
 
                     {{#each subpackages}}
                         <div>
-                            <p>{{this.subpackage_name}}</p>
-
-                            <details>
-                                <summary>Passing</summary>
-                                {{#each this.passing_tests}}
-                                <p>
-                                    {{this.name}}
-                                </p>
-                                {{/each}}
-                            </details>
-
-                            <details open>
-                                <summary>Failing</summary>
-                                {{#each this.failing_tests}}
+                            <h4>{{this.subpackage_name}}</h4>
+                            {{#if (and this.passing_tests (not this.failing_tests 0))}}
+                                <p>Ok</p>
+                            {{else}}
                                 <details>
-                                    <summary style="color: red;">
+                                    <summary>Passing</summary>
+                                    {{#each this.passing_tests}}
+                                    <p>
                                         {{this.name}}
-                                    </summary>
-                                    {{this.msg}}
+                                    </p>
+                                    {{/each}}
                                 </details>
-                                {{/each}}
-                            </details>
+
+                                <details open>
+                                    <summary>Failing</summary>
+                                    {{#each this.failing_tests}}
+                                    <details>
+                                        <summary style="color: red;">
+                                            {{this.name}}
+                                        </summary>
+                                        <p>
+                                            {{this.msg}}
+                                        </p>
+                                    </details>
+                                    {{/each}}
+                                </details>
+                            {{/if}}
                         </div>
 
                     {{/each}}
