@@ -1,4 +1,66 @@
 
-#containers {
+#container {
     display:flex;
+    flex-direction: row;
+    flex-grow: 1;
+    width: 100%;
+}
+
+#left-sidebar.open {
+    width: 200px;
+}
+
+#left-sidebar {
+    transition:ease-in-out all .5s;
+}
+
+#left-sidebar:not(.open) {
+    width: 0;
+}
+
+#file-tree {
+    overflow-x: scroll;
+
+}
+
+#left-sidebar-button {
+    position: absolute;
+    right:-20;
+    top: 0;
+    rotate: 90deg;
+    border: none;
+    color: #181818;
+}
+
+#prev-next-buttons {
+    margin-top: 50px;
+    display: flex;
+    justify-content: space-between;
+}
+
+h1 {
+    text-align: center;
+}
+
+#left-sidebart,
+#test-results {
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+}
+
+#test-results {
+    width: 250px;
+    overflow-x: scroll;
+}
+
+#code {
+    flex-grow: 4;
+    z-index: 1;
+}
+
+#student-list {
+    position: absolute;
+    left: 50px;
+    top: 50px;
 }

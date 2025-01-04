@@ -8,65 +8,81 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/java.min.js"></script>
     <script>hljs.highlightAll();</script>
+    <script src="../../styles/sidebars.js" defer></script>
     <link rel="stylesheet" href="../../styles/global.css">
     <link rel="stylesheet" href="../../styles/index.css">
     <link rel="stylesheet" href="../../styles/student.css">
 </head>
 
 <body>
-    <h1>{{file}}</h1>
-    <!-- File hierarchy -->
-    <a href="../../index.html">Student List</a>
-    <div id="containers">
-        <section>
-            {{ for file in files }}
-            <div>
-                <a href="./{ file.html_path }">{ file.java_path }</a>
+    <a href="../../index.html" id="student-list">Student List</a>
+    <h1>{{student}}</h1>
+    <div id="container">
+        <div id="left-sidebar">
+            <h2>File List</h2>
+            {{#each files}}
+                <a href="./{{this.html_path}}">{{this.java_path}}</a>
+            {{/each}}
+            <div id="prev-next-buttons">
+                <a class="button" href="../{{prev_student}}">{{prev_student}}</a>
+                <a class="button" href="../{{next_student}}">{{next_student}}</a>
             </div>
-            {{ endfor }}
-        </section>
-        <section>
-            <pre>
-                <code class="language-java">
-                    { code }
-                </code>
-            </pre>
-        </section>
+            <button id="left-sidebar-button">File List</button>
+        </div>
+        <div id="code">
+            <pre><code class="language-java">
+                {{code}}
+            </code></pre>
+        </div>
+        <div id="test-results">
+                {{#each test_contexts}}
+                    <p>
+                        {{this.test_package_name}}
+                    </p>
+                    {{#if this.compile_error}}
+                        <p>Compile Error</p>
+                    {{/if}}
 
-        <section>
-            tests
-        </section>
+                    {{#if this.other_error}}
+                        <p>Unknown error</p>
+                    {{/if}}
 
-        <section>
-            {{ for test_group in all_tests }}
-            <div>
-                { test_group.test_group_name }
+                    {{#if this.not_ran}}
+                        <p>Not Ran</p>
+                    {{/if}}
 
-                {{ if test_group.compile_error }}
-                <p>Compile Error</p>
-                {{ endif }}
+                    {{#each subpackages}}
+                        <div>
+                            <p>{{this.subpackage_name}}</p>
 
-                {{ if test_group.other_error }}
-                <p>Other Error</p>
-                {{ endif }}
+                            <details>
+                                <summary>Passing</summary>
+                                {{#each this.passing_tests}}
+                                <p>
+                                    {{this.name}}
+                                </p>
+                                {{/each}}
+                            </details>
 
-                {{ if test_group.not_ran }}
-                <p>Not Ran</p>
-                {{ endif }}
+                            <details open>
+                                <summary>Failing</summary>
+                                {{#each this.failing_tests}}
+                                <details>
+                                    <summary style="color: red;">
+                                        {{this.name}}
+                                    </summary>
+                                    {{this.msg}}
+                                </details>
+                                {{/each}}
+                            </details>
+                        </div>
 
-                {{ for test in tests_group.tests }}
-                    <div>
-                        { test.name }
-                        { test.classname }
-                    </div>
+                    {{/each}}
 
-                {{ endfor }}
-            </div>
-            {{ endfor }}
-        </section>
+                {{/each}}
+        </div>
 
     </div>
-
 </body>
 
 </html>

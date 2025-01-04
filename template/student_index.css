@@ -14,7 +14,6 @@
 #file-list {
     flex-grow: 5;
     padding-left: 50px;
-    flex-grow: 1;
     padding-right: 50px;
     min-width: 650px;
     border-right: 1px solid #dfdfdf;
@@ -34,4 +33,10 @@ footer {
     margin-top: 50px;
     display: flex;
     justify-content: space-between;
+}
+
+#student-list {
+    position: absolute;
+    left: 50px;
+    top: 50px;
 }

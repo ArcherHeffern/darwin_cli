@@ -16,19 +16,13 @@ body {
     flex-direction: column;
 }
 
-* {
+*:not(pre):not(code):not(span) {
     color: #dfdfdf;
     font-family: "Libre Baskerville", Arial;
     font-weight: 400;
     font-style: normal;
     line-height: 1.5;
     box-sizing: border-box;
-}
-
-#student-list {
-    position: absolute;
-    left: 50px;
-    top: 50px;
 }
 
 a {

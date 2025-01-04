@@ -54,10 +54,10 @@
                             <details open>
                                 <summary>Failing</summary>
                                 {{#each this.failing_tests}}
-                                <p style="color: red;">
-                                    {{this.name}}
-                                </p>
                                 <details>
+                                    <summary style="color: red;">
+                                        {{this.name}}
+                                    </summary>
                                     {{this.msg}}
                                 </details>
                                 {{/each}}

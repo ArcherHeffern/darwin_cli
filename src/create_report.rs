@@ -83,8 +83,8 @@ fn initialize_handlebars(handlebars: &mut Handlebars) -> Result<()> {
         .map_err(|e| Error::new(ErrorKind::Other, e.to_string()))?;
     handlebars.register_template_string("tests_template", include_str!("../template/tests.hbs"))
         .map_err(|e| Error::new(ErrorKind::Other, e.to_string()))?;
-    // handlebars.register_template_string("student_template", include_str!("../template/student.hbs"))
-        // .map_err(|e| Error::new(ErrorKind::Other, e.to_string()))?;
+    handlebars.register_template_string("student_template", include_str!("../template/student.hbs"))
+        .map_err(|e| Error::new(ErrorKind::Other, e.to_string()))?;
     Ok(())
 }
 
@@ -100,6 +100,7 @@ fn report_initialize(report_root: &Path) -> Result<()> {
     
     fs::write(report_root.join("styles").join("global.css"), include_bytes!("../template/global.css"))?;
     fs::write(report_root.join("styles").join("index.css"), include_str!("../template/index.css"))?;
+    fs::write(report_root.join("styles").join("sidebars.js"), include_bytes!("../template/sidebars.js"))?;
     fs::write(report_root.join("styles").join("student_index.css"), include_str!("../template/student_index.css"))?;
     fs::write(report_root.join("styles").join("student.css"), include_str!("../template/student.css"))?;
     fs::write(report_root.join("styles").join("LibreBaskerville-Regular.ttf"), include_bytes!("../template/LibreBaskerville-Regular.ttf"))?;
@@ -263,7 +264,11 @@ struct StudentTemplateContext<'a> {
     file: &'a str,
     files: &'a Vec<StudentTemplateFile>,
     code: &'a str,
-    all_tests: &'a Vec<TestPackageContext<'a>>
+    test_contexts: &'a Vec<TestPackageContext<'a>>,
+    prev_student: &'a str,
+    student: &'a str,
+    next_student: &'a str,
+
 }
 
 #[derive(Serialize)]
@@ -324,9 +329,7 @@ fn create_student_report_html(
     next_student: &str,
     handlebars: &Handlebars
 ) -> Result<String> {
-    // student_template.render("student_template", &StudentTemplateContext { file, files: &files, code: &code, all_tests: None }).map_err(|e|Error::new(ErrorKind::Other, e.to_string()))
-    // student_template.render("student_template", &StudentTemplateContext { file, files: &files, code: &code, all_tests: test_contexts  }).map_err(|e|Error::new(ErrorKind::Other, e.to_string()))
-    Ok(String::new())
+    handlebars.render("student_template", &StudentTemplateContext { file, files: &files, code: &code, test_contexts, prev_student, student, next_student }).map_err(|e|Error::new(ErrorKind::Other, e.to_string()))
 }
 
 #[derive(Serialize)]
