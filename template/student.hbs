@@ -15,10 +15,20 @@
 </head>
 
 <body>
-    <a href="../../index.html" id="student-list">Student List</a>
-    <h1>{{student}}</h1>
+    <header>
+        <div class="left">
+            <button onclick="window.location.href=../../index.html" id="back-button">Student List</button>
+            <button id="left-sidebar-button">Toggle File List</button>
+            <button id="right-sidebar-button">Toggle Test Results</button>
+            <button id="bottom-sidebar-button">Toggle Tests</button>
+        </div>
+        <div class="middle">
+            <h1>{{student}}</h1>
+        </div>
+        <div class="right"></div>
+    </header>
     <div id="container">
-        <div id="left-sidebar">
+        <div id="left-sidebar" class="open">
             <h2>File List</h2>
             {{#each files}}
                 <a href="./{{this.html_path}}">{{this.java_path}}</a>
@@ -28,13 +38,12 @@
                 <a class="button" href="../{{next_student}}">{{next_student}}</a>
             </div>
         </div>
-        <button id="left-sidebar-button">File List</button>
         <div id="code">
             <pre><code class="language-java">
                 {{code}}
             </code></pre>
         </div>
-        <div id="test-results">
+        <div id="right-sidebar" class="open">
                 {{#each test_contexts}}
                     <p>
                         {{this.test_package_name}}
