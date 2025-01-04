@@ -15,12 +15,11 @@ use crate::{list_students, list_tests};
 pub fn prompt_yn(prompt: &str) -> Result<bool> {
     let stdin = io::stdin();
     let mut stdout = io::stdout();
-    print!("{}", prompt);
+    print!("{} ", prompt);
     stdout.flush()?;
     let mut line = String::new();
-    stdin.lock().read_line(&mut line)?;
-    println!();
-    Ok(line.as_str() == "y\n")
+    let size = stdin.lock().read_line(&mut line)?;
+    Ok(line.as_str()[..size-1].to_lowercase() == "y")
 }
 
 pub fn copy_dir_all(
@@ -247,9 +246,8 @@ pub fn recreate_student_main(
         return Err(Error::new(ErrorKind::Other, "Expected dir"));
     }
 
-    copy_dir_all(main_dir(), main_dest_dir, &HashSet::new())?;
     patch(
-        darwin_root().join("main").as_path(),
+        &main_dir(),
         diff_path,
         main_dest_dir,
     )?;
@@ -268,7 +266,7 @@ pub fn patch(patch_path: &Path, diff_path: &Path, dest_path: &Path) -> Result<()
         .arg(dest_path)
         .arg("-p2")
         .stdin(Stdio::piped())
-        .stdout(Stdio::null())
+        // .stdout(Stdio::null())
         .spawn()?;
 
     match output.stdin.take() {

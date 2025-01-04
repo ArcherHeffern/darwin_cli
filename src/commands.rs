@@ -1,9 +1,7 @@
 use std::{
     collections::HashSet,
     fs::{remove_dir_all, remove_file, OpenOptions},
-    io::{stdin, BufRead},
     path::Path,
-    process::exit,
 };
 
 use crate::{
@@ -114,12 +112,8 @@ pub fn view_all_results(test: &str, summarize: bool) {
 pub fn download_results_summary(test: &str, outfile: &str) {
     let out_file_path = Path::new(outfile);
     if out_file_path.exists() {
-        println!("{} Exists. Continue? (Y/N)", outfile);
-        let mut s = String::new();
-        stdin().lock().read_line(&mut s).expect("Stdin to work");
-        s = s.to_lowercase();
-        if s != "y\n" {
-            exit(0);
+        if !prompt_yn(&format!("{} Exists. Continue? (y/n)", outfile)).unwrap_or(false) {
+            return;
         }
     }
     let out_file = OpenOptions::new()
@@ -133,12 +127,8 @@ pub fn download_results_summary(test: &str, outfile: &str) {
 pub fn download_results_by_classname(test: &str, outfile: &str) {
     let out_file = Path::new(outfile);
     if out_file.exists() {
-        println!("{} Exists. Continue? (Y/N)", outfile);
-        let mut s = String::new();
-        stdin().lock().read_line(&mut s).expect("Stdin to work");
-        s = s.to_lowercase();
-        if s != "y\n" {
-            exit(0);
+        if !prompt_yn(&format!("{} Exists. Continue? (y/n)", outfile)).unwrap_or(false) {
+            return;
         }
     }
     download_results::download_results_by_classname(out_file, test).unwrap();
@@ -167,12 +157,8 @@ pub fn view_student_submission(student: &str) {
 
 pub fn create_report(report_path: &Path, tests: &Vec<String>) {
     if report_path.exists() {
-        println!("'{:?}' Exists. Continue? (Y/N)", report_path);
-        let mut s = String::new();
-        stdin().lock().read_line(&mut s).expect("Stdin to work");
-        s = s.to_lowercase();
-        if s != "y\n" {
-            exit(0);
+        if !prompt_yn(&format!("{:?} Exists. Continue? (y/n)", report_path)).unwrap_or(false) {
+            return;
         }
     }
 
