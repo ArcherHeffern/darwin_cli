@@ -60,9 +60,9 @@ impl TestResults {
                 for result in results.iter() {
                     m.entry(result.classname.clone()).and_modify(|e|e.push(result)).or_insert(Vec::new());
                 }
+                Some(m)
             }
         }
-        None
     }
 
     pub fn summarize_by_classname(&self) -> Option<HashMap<String, (i32, i32, i32)>> {
