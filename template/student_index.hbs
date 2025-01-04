@@ -10,14 +10,65 @@
 <body>
     <a href="../../index.html" id="student-list">Student List</a>
     <h1>{{student}}</h1> 
-    <div id="file-list">
-        {{#each files}}
-            <a href="./{{this.html_path}}">{{this.java_path}}</a>
-        {{/each}}
-        <footer>
-            <a class="button" href="../{{prev_student}}">{{prev_student}}</a>
-            <a class="button" href="../{{next_student}}">{{next_student}}</a>
-        </footer>
+    <div id="container">
+        <div id="file-list">
+            <h2>File List</h2>
+            {{#each files}}
+                <a href="./{{this.html_path}}">{{this.java_path}}</a>
+            {{/each}}
+            <footer>
+                <a class="button" href="../{{prev_student}}">{{prev_student}}</a>
+                <a class="button" href="../{{next_student}}">{{next_student}}</a>
+            </footer>
+        </div>
+        <div id="test-results">
+                {{#each test_contexts}}
+                    <p>
+                        {{this.test_package_name}}
+                    </p>
+                    {{#if this.compile_error}}
+                        <p>Compile Error</p>
+                    {{/if}}
+
+                    {{#if this.other_error}}
+                        <p>Unknown error</p>
+                    {{/if}}
+
+                    {{#if this.not_ran}}
+                        <p>Not Ran</p>
+                    {{/if}}
+
+                    {{#each subpackages}}
+                        <div>
+                            <p>{{this.subpackage_name}}</p>
+
+                            <details>
+                                <summary>Passing</summary>
+                                {{#each this.passing_tests}}
+                                <p>
+                                    {{this.name}}
+                                </p>
+                                {{/each}}
+                            </details>
+
+                            <details open>
+                                <summary>Failing</summary>
+                                {{#each this.failing_tests}}
+                                <p style="color: red;">
+                                    {{this.name}}
+                                </p>
+                                <details>
+                                    {{this.msg}}
+                                </details>
+                                {{/each}}
+                            </details>
+                        </div>
+
+                    {{/each}}
+
+                {{/each}}
+        </div>
+
     </div>
 </body>
 </html>

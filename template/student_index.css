@@ -1,15 +1,33 @@
-
-body {
+#container {
     display: flex;
-    align-items: center;
+    flex-direction: row;
+    flex-grow: 1;
+}
+
+#file-list,
+#test-results {
+    display: flex;
     flex-direction: column;
+    padding: 20px;
 }
 
 #file-list {
-    display: flex;
-    width: 400px;
-    justify-content: left;
-    flex-direction: column;
+    flex-grow: 5;
+    padding-left: 50px;
+    flex-grow: 1;
+    padding-right: 50px;
+    min-width: 650px;
+    border-right: 1px solid #dfdfdf;
+    border-image: linear-gradient(to top, #dfdfdf 0%, #181818 100%) 1;
+}
+
+h1 {
+    text-align: center;
+}
+
+#test-results {
+    flex-grow: 1;
+    min-width: 350px;
 }
 
 footer {

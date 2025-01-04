@@ -6,8 +6,14 @@
     src: url(LibreBaskerville-Regular.ttf) format("truetype");
 }
 
+html,
 body {
     background-color: #181818;
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
 }
 
 * {
@@ -16,6 +22,7 @@ body {
     font-weight: 400;
     font-style: normal;
     line-height: 1.5;
+    box-sizing: border-box;
 }
 
 #student-list {

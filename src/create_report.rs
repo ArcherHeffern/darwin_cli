@@ -1,5 +1,5 @@
 use std::{
-    fs::{self, create_dir, remove_dir_all}, io::{Error, ErrorKind, Result}, path::Path
+    borrow::Borrow, fs::{self, create_dir, remove_dir_all}, io::{Error, ErrorKind, Result}, path::Path
 };
 
 use serde::Serialize;
@@ -7,7 +7,7 @@ use tempfile::tempdir;
 use handlebars::Handlebars;
 
 use crate::{
-    config::{darwin_root, student_diff_file, tests_ran_file}, list_students::list_students, list_tests::list_tests, types::{TestResult, TestResultError, TestResults}, util::{
+    config::{darwin_root, student_diff_file, tests_ran_file}, list_students::list_students, list_tests::list_tests, types::{StatusMsg, TestResult, TestResultError, TestResults}, util::{
         file_contains_line, flatten_move_recursive, list_files_recursively, recreate_student_main,
     }, view_student_results::parse_test_results
 };
@@ -179,38 +179,40 @@ fn _create_student_report(
         files.push( StudentTemplateFile { html_path, java_path });
     });
 
-    let mut all_tests: Vec<TestGroupContext> = Vec::new();
-    let test_results: Vec<std::result::Result<TestResults, TestResultError>> = tests.iter().map(|test|parse_test_results(student, test)).collect();
-    for i in 0..test_results.len() {
-        match &test_results[i] {
-            Ok(ok) => {
-                match ok.group_by_classname() {
+    let mut test_packages: Vec<TestPackageContext> = Vec::new();
+    let test_packages_results: Vec<std::result::Result<TestResults, TestResultError>> = tests.iter().map(|test|parse_test_results(student, test)).collect();
+    for i in 0..test_packages_results.len() {
+        match &test_packages_results[i] {
+            Ok(test_package_result) => {
+                match test_package_result.group_by_classname() {
                     None => {
-                        all_tests.push(TestGroupContext { test_group_name: &ok.test, tests: Vec::new(), compile_error: true, other_error: false, not_ran: false });
+                        test_packages.push(TestPackageContext { test_package_name: &test_package_result.test, subpackages: Vec::new(), compile_error: true, other_error: false, not_ran: false });
                     }
                     Some(s) => {
-                        let mut tests: Vec<Vec<&TestResult>> = Vec::new();
-                        for (_,v) in s {
-                            tests.push(v);
+                        let mut test_subpackage: Vec<TestSubpackageContext> = Vec::new();
+                        for (k,v) in s {
+                            let passing_tests: Vec<TestContext> = v.iter().filter(|t|matches!(t.msg, StatusMsg::None)).map(|t|*t).map(|c|TestContext::from_test_result(c)).collect();
+                            let failing_tests: Vec<TestContext> = v.iter().filter(|t|!matches!(t.msg, StatusMsg::None)).map(|t|*t).map(|c|TestContext::from_test_result(c)).collect();
+                            test_subpackage.push(TestSubpackageContext { subpackage_name: k, passing_tests, failing_tests});
                         }
-                        all_tests.push(TestGroupContext {test_group_name: &ok.test, tests, compile_error: false, other_error: false, not_ran: false});
+                        test_packages.push(TestPackageContext {test_package_name: &test_package_result.test, subpackages: test_subpackage, compile_error: false, other_error: false, not_ran: false});
                     }
                 }
             }
             Err(e) => {
                 match e {
                     TestResultError::IOError(_) => {
-                        all_tests.push(TestGroupContext {test_group_name: &tests[i], tests: Vec::new(), compile_error: false, other_error: true, not_ran: false});
+                        test_packages.push(TestPackageContext {test_package_name: &tests[i], subpackages: Vec::new(), compile_error: false, other_error: true, not_ran: false});
                     }
                     TestResultError::TestsNotRun => {
-                        all_tests.push(TestGroupContext {test_group_name: &tests[i], tests: Vec::new(), compile_error: false, other_error: false, not_ran: true});
+                        test_packages.push(TestPackageContext {test_package_name: &tests[i], subpackages: Vec::new(), compile_error: false, other_error: false, not_ran: true});
                     }
                 }
             }
         };
     }
 
-    let student_root_file = create_student_index(student, &files, student_template, prev_student, next_student)?;
+    let student_root_file = create_student_index(student, &files, student_template, prev_student, next_student, &test_packages)?;
     fs::write(tmpdir.path().join("index.html"), student_root_file)?;
     for (i, file) in file_paths.iter().enumerate() {
         let code = fs::read_to_string(&file)?;
@@ -218,7 +220,7 @@ fn _create_student_report(
             &files[i].java_path,
             code,
             &files,
-            &all_tests,
+            &test_packages,
             prev_student,
             student,
             next_student,
@@ -240,6 +242,7 @@ struct StudentIndexTemplateContext<'a> {
     prev_student: &'a str,
     next_student: &'a str,
     files: &'a Vec<StudentTemplateFile>,
+    test_contexts: &'a Vec<TestPackageContext<'a>>
 }
 
 fn create_student_index(
@@ -247,25 +250,59 @@ fn create_student_index(
     files: &Vec<StudentTemplateFile>,
     handlebars: &Handlebars,
     prev_student: &str,
-    next_student: &str
+    next_student: &str,
+    test_contexts: &Vec<TestPackageContext>,
 ) -> Result<String> {
-    handlebars.render("student_index_template", &StudentIndexTemplateContext { student, files, prev_student, next_student }).map_err(|e|Error::new(ErrorKind::Other, e))
+    handlebars.render("student_index_template", &StudentIndexTemplateContext { student, files, prev_student, next_student, test_contexts }).map_err(|e|Error::new(ErrorKind::Other, e))
 }
 #[derive(Serialize)]
 struct StudentTemplateContext<'a> {
     file: &'a str,
     files: &'a Vec<StudentTemplateFile>,
     code: &'a str,
-    all_tests: &'a Vec<TestGroupContext<'a>>
+    all_tests: &'a Vec<TestPackageContext<'a>>
 }
 
 #[derive(Serialize)]
-struct TestGroupContext<'a> {
-    test_group_name: &'a str,
-    tests: Vec<Vec<&'a TestResult>>,
+struct TestPackageContext<'a> {
+    test_package_name: &'a str,
+    subpackages: Vec<TestSubpackageContext>,
     compile_error: bool,
     other_error: bool,
     not_ran: bool
+}
+
+#[derive(Serialize)]
+struct TestSubpackageContext {
+    subpackage_name: String,
+    passing_tests: Vec<TestContext>,
+    failing_tests: Vec<TestContext>,
+}
+
+#[derive(Serialize)]
+struct TestContext {
+    pub name: String,
+    pub classname: String,
+    pub time: String,
+    pub msg: String,
+    pub type_: String,
+}
+
+impl TestContext {
+    fn from_test_result(test_result: &TestResult) -> TestContext {
+        let (msg, type_): (String, String) = match test_result.msg {
+            StatusMsg::None => (String::new(), String::new()),
+            StatusMsg::Error { ref message, ref type_ } => (message.as_ref().map_or(String::new(), |v|String::from(v)), type_.clone()),
+            StatusMsg::Failure { ref message, ref type_ } => (message.as_ref().map_or(String::new(),|v|String::from(v)), type_.clone())
+        };
+        TestContext {
+            name: test_result.name.clone(),
+            classname: test_result.classname.clone(),
+            time: format!("Seconds: {}, Milliseconds: {}", test_result.time.as_secs(), test_result.time.subsec_millis()),
+            msg,
+            type_,
+        }
+    }
 }
 
 #[derive(Serialize)]
@@ -278,7 +315,7 @@ fn create_student_report_html(
     file: &str,
     code: String,
     files: &Vec<StudentTemplateFile>,
-    test_contexts: &Vec<TestGroupContext>,
+    test_contexts: &Vec<TestPackageContext>,
     prev_student: &str,
     student: &str,
     next_student: &str,
