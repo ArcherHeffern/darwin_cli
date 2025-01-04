@@ -1,6 +1,10 @@
 __Current__
 - Create report to distribute to TA's 
 
+Parse XML file better? 
+mvn -Dtest=AllSequentialTests surefire-report:report
+Download project better. Should include test dir and src/main instead of project/main
+
 __Later__
 - Parsing of result files
   - What if is run multiple times and fails 3/5? 

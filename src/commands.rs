@@ -25,7 +25,7 @@ pub fn create_darwin(
     copy_ignore_set: &HashSet<&str>,
 ) {
     if darwin_root().exists() {
-        if prompt_yn("Darwin project already exists in this directory. Override? (y/n)")
+        if !prompt_yn("Darwin project already exists in this directory. Override? (y/n)")
             .unwrap_or(false)
         {
             return;
@@ -147,12 +147,9 @@ pub fn download_results_by_classname(test: &str, outfile: &str) {
 pub fn view_student_submission(student: &str) {
     let dest = Path::new(student);
     if dest.exists() {
-        println!("'{}' Exists. Continue? (Y/N)", student);
-        let mut s = String::new();
-        stdin().lock().read_line(&mut s).expect("Stdin to work");
-        s = s.to_lowercase();
-        if s != "y\n" {
-            exit(0);
+        if !prompt_yn(&format!("'{}' Exists. Continue? (Y/N)", student)).unwrap_or(false) {
+            println!("Aborting...");
+            return;
         }
     }
     if dest.is_file() && remove_file(dest).is_err() {
