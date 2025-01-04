@@ -7,20 +7,13 @@
 }
 
 #left-sidebar.open {
-    width: 200px;
+    width: fit-content;
 }
 
 #left-sidebar {
-    transition:ease-in-out all .5s;
-}
-
-#left-sidebar:not(.open) {
     width: 0;
-}
-
-#file-tree {
-    overflow-x: scroll;
-
+    position:relative;
+    overflow: hidden; /* Hide content when collapsed */
 }
 
 #left-sidebar-button {
@@ -30,6 +23,7 @@
     rotate: 90deg;
     border: none;
     color: #181818;
+    cursor: pointer; /* Pointer cursor on hover */
 }
 
 #prev-next-buttons {
@@ -42,21 +36,15 @@ h1 {
     text-align: center;
 }
 
-#left-sidebart,
+#left-sidebar,
 #test-results {
     display: flex;
     flex-direction: column;
-    padding: 20px;
-}
-
-#test-results {
-    width: 250px;
-    overflow-x: scroll;
 }
 
 #code {
+    min-width: 0;
     flex-grow: 4;
-    z-index: 1;
 }
 
 #student-list {
