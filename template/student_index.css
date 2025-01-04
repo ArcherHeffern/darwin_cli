@@ -15,18 +15,13 @@
     flex-grow: 5;
     padding-left: 50px;
     padding-right: 50px;
-    min-width: 650px;
+    min-width: 600px;
     border-right: 1px solid #dfdfdf;
     border-image: linear-gradient(to top, #dfdfdf 0%, #181818 100%) 1;
 }
 
 h1 {
     text-align: center;
-}
-
-#test-results {
-    flex-grow: 1;
-    min-width: 350px;
 }
 
 footer {
@@ -39,4 +34,51 @@ footer {
     position: absolute;
     left: 50px;
     top: 50px;
+}
+
+/* Test Sidebar Styles */
+
+#right-sidebar {
+    flex-grow: 2;
+    min-width: 450px;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding-right: 20px;
+    padding-left: 20px;
+}
+
+h3 {
+    text-decoration: underline;
+    margin-bottom: 0;
+}
+
+h4 {
+    margin-left: 10px;
+}
+
+details summary {
+    margin-left: 10px;
+}
+
+details p {
+    margin-left: 20px;
+}
+
+details details {
+    margin-left: 10px;
+}
+
+#right-sidebar div p {
+    margin-left: 40px;
+}
+
+#right-sidebar div details {
+    margin-left: 20px;
+}
+
+#right-sidebar.open {
+    padding-right: 10px;
+    padding-left: 10px;
+    width: 400px;
 }
