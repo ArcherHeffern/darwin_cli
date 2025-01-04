@@ -1,5 +1,5 @@
 use std::{
-    borrow::Borrow, fs::{self, create_dir, remove_dir_all}, io::{Error, ErrorKind, Result}, path::Path
+    fs::{self, create_dir, remove_dir_all}, io::{Error, ErrorKind, Result}, path::Path
 };
 
 use serde::Serialize;
@@ -7,7 +7,7 @@ use tempfile::tempdir;
 use handlebars::Handlebars;
 
 use crate::{
-    config::{darwin_root, student_diff_file, tests_ran_file}, list_students::list_students, list_tests::list_tests, types::{StatusMsg, TestResult, TestResultError, TestResults}, util::{
+    config::{darwin_root, student_diff_file, test_dir, tests_ran_file}, list_students::list_students, list_tests::list_tests, types::{StatusMsg, TestResult, TestResultError, TestResults}, util::{
         file_contains_line, flatten_move_recursive, list_files_recursively, recreate_student_main,
     }, view_student_results::parse_test_results
 };
@@ -68,6 +68,7 @@ fn _create_report(report_root: &Path, tests: &Vec<String>) -> Result<()> {
     let mut handlebars = Handlebars::new();
     initialize_handlebars(&mut handlebars)?;
 
+    create_tests_page_html(&report_root.join("tests.html"), &handlebars)?;
     create_report_student_list(&report_root.join("index.html"), &students, &handlebars)?;
     create_student_reports(report_root, tests, &students, &handlebars)?;
 
@@ -79,6 +80,8 @@ fn initialize_handlebars(handlebars: &mut Handlebars) -> Result<()> {
     handlebars.register_template_string("student_list", include_str!("../template/index.hbs"))
         .map_err(|e| Error::new(ErrorKind::Other, e.to_string()))?;
     handlebars.register_template_string("student_index_template", include_str!("../template/student_index.hbs"))
+        .map_err(|e| Error::new(ErrorKind::Other, e.to_string()))?;
+    handlebars.register_template_string("tests_template", include_str!("../template/tests.hbs"))
         .map_err(|e| Error::new(ErrorKind::Other, e.to_string()))?;
     // handlebars.register_template_string("student_template", include_str!("../template/student.hbs"))
         // .map_err(|e| Error::new(ErrorKind::Other, e.to_string()))?;
@@ -324,4 +327,32 @@ fn create_student_report_html(
     // student_template.render("student_template", &StudentTemplateContext { file, files: &files, code: &code, all_tests: None }).map_err(|e|Error::new(ErrorKind::Other, e.to_string()))
     // student_template.render("student_template", &StudentTemplateContext { file, files: &files, code: &code, all_tests: test_contexts  }).map_err(|e|Error::new(ErrorKind::Other, e.to_string()))
     Ok(String::new())
+}
+
+#[derive(Serialize)]
+struct TestPageContext {
+    files: Vec<TestPageFileContext>
+}
+
+#[derive(Serialize)]
+struct TestPageFileContext {
+    test_file_name: String,
+    test_file_contents: String,
+}
+
+fn create_tests_page_html(
+    dest: &Path,
+    handlebars: &Handlebars
+) -> Result<()> {
+    let files: Vec<TestPageFileContext> = list_files_recursively(&test_dir()).iter().map(|f| {
+        let test_file_name = f.file_name().ok_or_else(||0).map_err(|e|Error::new(ErrorKind::Other, e.to_string()))?.to_string_lossy().to_string();
+        let test_file_contents = fs::read_to_string(f)?;
+        Ok::<TestPageFileContext, Error>(TestPageFileContext { test_file_name, test_file_contents})
+    }).flatten().collect();
+
+    let s = handlebars.render("tests_template", &TestPageContext { files }).map_err(|e|Error::new(ErrorKind::Other, e.to_string()))?;
+
+    fs::write(dest, s)?;
+
+    Ok(())
 }

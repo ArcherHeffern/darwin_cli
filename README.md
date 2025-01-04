@@ -55,6 +55,7 @@ A report contains all students test results and code (syntax highlighted) in a e
 ```verbatim
 report
 | -- index.html (Contains student list)
+| -- tests.html (Contains all tests with syntax highlighting, will be iframed into all student java files)
 |
 | -- students/
 |     | -- $(student_name)
