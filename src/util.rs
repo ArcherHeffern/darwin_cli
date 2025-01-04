@@ -266,7 +266,7 @@ pub fn patch(patch_path: &Path, diff_path: &Path, dest_path: &Path) -> Result<()
         .arg(dest_path)
         .arg("-p2")
         .stdin(Stdio::piped())
-        // .stdout(Stdio::null())
+        .stdout(Stdio::null())
         .spawn()?;
 
     match output.stdin.take() {

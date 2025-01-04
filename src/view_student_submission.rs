@@ -1,12 +1,11 @@
 use std::{
-    io::{Error, Result},
-    path::Path,
+    collections::HashSet, io::{Error, Result}, path::Path
 };
 
 use crate::{
-    config::{main_dir, student_diff_file},
+    config::{main_dir, student_diff_file, test_dir},
     list_students,
-    util::patch,
+    util::{copy_dir_all, patch},
 };
 
 // Should we coerce into working, or return error?
@@ -40,5 +39,11 @@ pub fn view_student_submission(student: &str, dest: &Path) -> Result<()> {
         ));
     }
 
-    patch(&main_dir(), student_diff_path.as_path(), dest)
+    _view_student_submission(dest, &student_diff_path)
+}
+
+fn _view_student_submission(dest: &Path, student_diff_path: &Path) -> Result<()> {
+    patch(&main_dir(), student_diff_path, &dest.join("src"))?;
+    copy_dir_all(test_dir(), dest.join("src").join("test"), &HashSet::new())?;
+    Ok(())
 }

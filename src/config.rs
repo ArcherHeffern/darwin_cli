@@ -29,7 +29,7 @@ pub fn results_dir() -> PathBuf {
 }
 
 pub fn compile_errors_file() -> PathBuf {
-    results_dir().join("compile_errors")
+    darwin_root().join("compile_errors")
 }
 
 pub fn test_dir() -> PathBuf {
