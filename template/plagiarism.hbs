@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Graph Visualization</title>
+    <style>
+        #graphCanvas {
+            padding: 50px;
+            box-sizing: border-box;
+        }
+
+        html, body, #graphCanvas {
+            width:  100%;
+            height: 100%;
+            margin: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="graphCanvas" width="800" height="600"></canvas>
+
+    <script>
+        const canvas = document.getElementById('graphCanvas');
+        const ctx = canvas.getContext('2d');
+        const nodeRadius = 20;
+        const canvas_width = canvas.width - 2*nodeRadius;
+        const canvas_height = canvas.height - 2*nodeRadius;
+
+        // Invariant: All coordinates are between 0 and 100
+
+        function drawGraph(nodePositions) {
+            // NodePositions: { "name": {x, y} }
+            // nodePositions[nodes[i]] = { x, y };
+        
+            // Draw nodes
+            for (const node in nodePositions) {
+            let [ x, y ] = nodePositions[node];
+            x = x/100*canvas_width + nodeRadius;
+            y = y/100*canvas_height + nodeRadius;
+        
+            ctx.beginPath();
+            ctx.arc(x, y, nodeRadius, 0, 2 * Math.PI);
+            ctx.fillStyle = 'lightblue';
+            ctx.fill();
+            ctx.stroke();
+        
+            ctx.font = '12px Arial';
+            ctx.fillStyle = 'black';
+            ctx.textAlign = 'center'; 
+            ctx.textBaseline = 'center'; 
+            ctx.fillText(node, x, y ); 
+            }
+        }
+        
+        // Example usage
+        // 
+        // A: [ 0, 0 ],
+        const positions = {
+            {{#each positions}}
+            "{{this.name}}": [ {{this.x}}, {{this.y}}],
+            {{/each}}
+        };
+        
+        drawGraph(positions);
+
+    </script>
+</body>
+
+</html>

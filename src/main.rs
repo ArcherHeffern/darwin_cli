@@ -1,5 +1,6 @@
 use camino::Utf8PathBuf;
 use clap::{Parser, Subcommand};
+use commands::{plagiarism_check, plagiarism_check_students};
 use config::darwin_root;
 use std::path::{Path, PathBuf};
 use std::{collections::HashSet, fs};
@@ -17,6 +18,7 @@ mod types;
 mod util;
 mod view_student_results;
 mod view_student_submission;
+mod plagiarism_checker;
 
 #[derive(Parser, Debug)]
 #[command(
@@ -81,6 +83,13 @@ enum SubCommand {
         dest_path: Utf8PathBuf,
         parts: u8,
         tests: Vec<String>,
+    },
+    PlagiarismCheck {
+        dest_path: Utf8PathBuf,
+    },
+    PlagiarismCheckStudents {
+        student1: String,
+        student2: String, 
     },
     Clean,
 }
@@ -158,6 +167,12 @@ fn main() {
             tests,
         } => {
             commands::create_report(dest_path.as_std_path(), parts, &tests);
+        }
+        SubCommand::PlagiarismCheck { dest_path } => {
+            plagiarism_check(dest_path.as_std_path());
+        }
+        SubCommand::PlagiarismCheckStudents { student1, student2 } => {
+            plagiarism_check_students(student1, student2);
         }
         SubCommand::Clean => {
             commands::clean();

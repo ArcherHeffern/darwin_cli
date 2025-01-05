@@ -5,15 +5,7 @@ use std::{
 };
 
 use crate::{
-    clean,
-    config::darwin_root,
-    create_darwin, create_report, download_results,
-    list_students::{self},
-    list_tests,
-    run_tests::{self},
-    types::TestResultError,
-    util::prompt_yn,
-    view_student_results, view_student_submission,
+    clean, config::darwin_root, create_darwin, create_report, download_results, list_students::{self}, list_tests, plagiarism_checker, run_tests::{self}, types::TestResultError, util::prompt_yn, view_student_results, view_student_submission
 };
 
 pub fn create_darwin(
@@ -190,6 +182,41 @@ pub fn create_report(report_path: &Path, parts: u8, tests: &Vec<String>) {
         }
         Err(e) => {
             eprintln!("Error generating report: {}", e);
+        }
+    }
+}
+
+pub fn plagiarism_check(dest_path: &Path) {
+    if dest_path.exists()
+        && !prompt_yn(&format!("{:?} Exists. Continue? (y/n)", dest_path)).unwrap_or(false)
+    {
+        return;
+    }
+
+    if (dest_path.is_file() && remove_file(dest_path).is_err())
+        || (dest_path.is_dir() && remove_dir_all(dest_path).is_err())
+    {
+        eprintln!("Failed to remove {:?}", dest_path);
+        return;
+    }
+
+    match plagiarism_checker::plagiarism_check(dest_path) {
+        Ok(_) => {
+            println!("Done");
+        }
+        Err(e) => {
+            eprintln!("{}", e);
+        }
+    }
+}
+
+pub fn plagiarism_check_students(student1: String, student2: String) {
+    match plagiarism_checker::plagiarism_check_students(&student1, &student2) {
+        Ok(score) => {
+            println!("{} and {} have a similarity score of {}", student1, student2, score);
+        }
+        Err(e) => {
+            eprintln!("{}", e);
         }
     }
 }

@@ -77,6 +77,9 @@ report
 - Right: Tests + tests failed
 - Bottom: Next student, previous student
 
+# Plagiarism Detection
+- Detection: Locality Sensitive hash using TLSH
+- Visualising: https://en.wikipedia.org/wiki/Multidimensional_scaling aka Principal Coordinates Analysis (PCoA)
 
 # .darwin folder structure
 ```verbatim
