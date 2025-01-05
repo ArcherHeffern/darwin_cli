@@ -119,10 +119,8 @@ pub fn create_report(report_path: &Path, tests: &Vec<String>, parts: u8) -> Resu
         }
     }
     _create_report(report_path, tests, parts).inspect_err(|_| {
-        if report_path.exists() {
-            if remove_dir_all(report_path).is_err() {
-                println!("Failed to cleanup");
-            }
+        if report_path.exists() && remove_dir_all(report_path).is_err() {
+            println!("Failed to cleanup");
         }
     })
 }
@@ -290,7 +288,7 @@ fn create_student_reports(
 
 fn create_student_report(
     report_root: &Path,
-    tests: &Vec<String>,
+    tests: &[String],
     prev_student: &str,
     student: &str,
     next_student: &str,
