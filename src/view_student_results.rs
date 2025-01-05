@@ -107,12 +107,25 @@ fn parse_surefire_report(
                     let message = get_attr(&attributes, "message");
                     let type_ = get_attr(&attributes, "type")
                         .expect(&format!("{}: XML Failure must have type attribute", name));
-                    msg = StatusMsg::Failure { message, type_ };
+                    let full_message = None;
+                    msg = StatusMsg::Failure { message, type_, full_message };
                 } else if _name == error {
                     let message = get_attr(&attributes, "message");
                     let type_ = get_attr(&attributes, "type")
                         .expect(&format!("{}: XML Failure must have type attribute", name));
-                    msg = StatusMsg::Error { message, type_ };
+                    let full_message = None;
+                    msg = StatusMsg::Error { message, type_, full_message };
+                }
+            }
+            Ok(XmlEvent::CData(data))=> {
+                match msg {
+                    StatusMsg::None => {}
+                    StatusMsg::Error { ref mut full_message, .. } => {
+                        let _ = full_message.insert(data);
+                    }
+                    StatusMsg::Failure { ref mut full_message, .. } => {
+                        let _ = full_message.insert(data);
+                    }
                 }
             }
             Ok(XmlEvent::EndElement { name: _name }) if _name == testcase => {

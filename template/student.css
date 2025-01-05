@@ -38,7 +38,7 @@ header {
 }
 
 #right-sidebar.open {
-    width: 400px;
+    width: 500px;
     overflow-wrap: break-word;
 }
 
@@ -132,4 +132,8 @@ p,
 details,
 summary {
     font-size: 14px;
+}
+
+.full-message {
+    font-size:10px;
 }

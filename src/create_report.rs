@@ -53,6 +53,7 @@ struct TestContext {
     pub time: String,
     pub msg: String,
     pub type_: String,
+    pub full_message: String,
 }
 
 #[derive(Serialize)]
@@ -144,7 +145,7 @@ fn _create_report(report_root: &Path, tests: &Vec<String>, parts: u8) -> Result<
         for i in 0..parts {
             let students_section =
                 &students[students_per_part * i..(students_per_part * (i + 1)).min(students.len())];
-            if students_section.is_empty() {
+            if !students_section.is_empty() {
                 _create_report_of_certain_students(
                     &report_root.join(i.to_string()),
                     tests,
@@ -467,21 +468,25 @@ fn create_student_index(
 
 impl TestContext {
     fn from_test_result(test_result: &TestResult) -> TestContext {
-        let (msg, type_): (String, String) = match test_result.msg {
-            StatusMsg::None => (String::new(), String::new()),
+        let (msg, type_, full_message): (String, String, String) = match test_result.msg {
+            StatusMsg::None => (String::new(), String::new(), String::new()),
             StatusMsg::Error {
                 ref message,
                 ref type_,
+                ref full_message,
             } => (
                 message.as_ref().map_or(String::new(), String::from),
                 type_.clone(),
+                full_message.as_ref().map_or(String::new(), String::from),
             ),
             StatusMsg::Failure {
                 ref message,
                 ref type_,
+                ref full_message,
             } => (
                 message.as_ref().map_or(String::new(), String::from),
                 type_.clone(),
+                full_message.as_ref().map_or(String::new(), String::from),
             ),
         };
         TestContext {
@@ -494,6 +499,7 @@ impl TestContext {
             ),
             msg,
             type_,
+            full_message,
         }
     }
 }

@@ -59,6 +59,10 @@ enum SubCommand {
         student: String,
         test: String,
     },
+    ViewStudentResultsVerbose {
+        student: String,
+        test: String,
+    },
     ViewAllStudentsResultsSummary {
         test: String,
     },
@@ -125,16 +129,19 @@ fn main() {
             commands::run_tests(tests.as_str(), num_threads.unwrap_or(1))
         }
         SubCommand::ViewStudentResultSummary { student, test } => {
-            commands::view_student_result(&student, &test, true);
+            commands::view_student_result(&student, &test, &commands::ViewMode::Summarize);
         }
         SubCommand::ViewStudentResultByClassName { student, test } => {
-            commands::view_student_result(&student, &test, false);
+            commands::view_student_result(&student, &test, &commands::ViewMode::ClassName);
+        }
+        SubCommand::ViewStudentResultsVerbose { student, test } => {
+            commands::view_student_result(&student, &test, &commands::ViewMode::Everything);
         }
         SubCommand::ViewAllStudentsResultsSummary { test } => {
-            commands::view_all_results(test.as_str(), true);
+            commands::view_all_results(test.as_str(), &commands::ViewMode::Summarize);
         }
         SubCommand::ViewAllStudentsResultsByClassName { test } => {
-            commands::view_all_results(test.as_str(), false);
+            commands::view_all_results(test.as_str(), &commands::ViewMode::ClassName);
         }
         SubCommand::DownloadResultsSummary { test, outfile } => {
             commands::download_results_summary(test.as_str(), outfile.as_str());

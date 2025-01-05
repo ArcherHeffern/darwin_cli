@@ -12,10 +12,8 @@
 }
 
 #file-list {
-    flex-grow: 5;
     padding-left: 50px;
     padding-right: 50px;
-    min-width: 600px;
     border-right: 1px solid #dfdfdf;
     border-image: linear-gradient(to top, #dfdfdf 0%, #181818 100%) 1;
 }
@@ -39,11 +37,9 @@ footer {
 /* Test Sidebar Styles */
 
 #right-sidebar {
-    flex-grow: 2;
-    min-width: 450px;
+    flex-grow: 1;
     display: flex;
     flex-direction: column;
-    min-width: 0;
     padding-right: 20px;
     padding-left: 20px;
     overflow-wrap:break-word;
@@ -82,4 +78,8 @@ details details {
     padding-right: 10px;
     padding-left: 10px;
     width: 400px;
+}
+
+.full-message {
+    font-size:12px;
 }

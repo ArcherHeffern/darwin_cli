@@ -6,6 +6,7 @@ pub struct TestResults {
     pub state: TestState,
 }
 
+#[derive(Debug)]
 pub enum TestState {
     CompilationError,
     Ok { results: Vec<TestResult> },
@@ -15,6 +16,36 @@ pub enum TestState {
 pub enum TestResultError {
     IOError(Error),
     TestsNotRun,
+}
+
+#[derive(Debug)]
+#[allow(dead_code)]
+pub struct TestResult {
+    pub name: String,
+    pub classname: String,
+    pub time: Duration,
+    pub msg: StatusMsg,
+}
+
+impl ToString for TestResult {
+    fn to_string(&self) -> String {
+        format!("{}: {:?}", self.name, self.msg)
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub enum StatusMsg {
+    None,
+    Failure {
+        message: Option<String>,
+        type_: String,
+        full_message: Option<String>
+    },
+    Error {
+        message: Option<String>,
+        type_: String,
+        full_message: Option<String>
+    },
 }
 
 impl TestResults {
@@ -59,6 +90,10 @@ impl TestResults {
         }
     }
 
+    pub fn everything(&self) -> String {
+        format!("{:?}", self.state)
+    }
+
     pub fn summarize_by_classname(&self) -> Option<HashMap<String, (i32, i32, i32)>> {
         match self.group_by_classname() {
             None => None,
@@ -86,26 +121,4 @@ impl TestResults {
         let m = self.summarize_by_classname();
         format!("{}_{} {:?}", self.student, self.test, m)
     }
-}
-
-#[derive(Debug)]
-#[allow(dead_code)]
-pub struct TestResult {
-    pub name: String,
-    pub classname: String,
-    pub time: Duration,
-    pub msg: StatusMsg,
-}
-
-#[derive(Debug, PartialEq)]
-pub enum StatusMsg {
-    None,
-    Failure {
-        message: Option<String>,
-        type_: String,
-    },
-    Error {
-        message: Option<String>,
-        type_: String,
-    },
 }

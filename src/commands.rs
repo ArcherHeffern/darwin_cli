@@ -77,13 +77,25 @@ pub fn run_tests(test: &str, num_threads: usize) {
     }
 }
 
-pub fn view_student_result(student: &str, test: &str, summarize: bool) {
+pub enum ViewMode {
+    Summarize,
+    ClassName,
+    Everything,
+}
+
+pub fn view_student_result(student: &str, test: &str, view_mode: &ViewMode) {
     match view_student_results::parse_test_results(student, test) {
         Ok(result) => {
-            if summarize {
-                println!("{}", result.summarize());
-            } else {
-                println!("{}", result.print());
+            match view_mode {
+                ViewMode::Summarize => {
+                    println!("{}", result.summarize());
+                }
+                ViewMode::ClassName => {
+                    println!("{}", result.print());
+                }
+                ViewMode::Everything => {
+                    println!("{}", result.everything());
+                }
             }
         }
         Err(e) => match e {
@@ -97,7 +109,7 @@ pub fn view_student_result(student: &str, test: &str, summarize: bool) {
     }
 }
 
-pub fn view_all_results(test: &str, summarize: bool) {
+pub fn view_all_results(test: &str, summarize: &ViewMode) {
     if !list_tests::list_tests().contains(test) {
         eprintln!("Test '{}' not recognized", test);
         return;
