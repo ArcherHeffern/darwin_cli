@@ -1,5 +1,5 @@
 use std::{
-    fs::{self, create_dir, remove_dir_all}, io::{Error, ErrorKind, Result}, path::Path
+    fs::{self, create_dir, create_dir_all, remove_dir_all}, io::{Error, ErrorKind, Result}, path::Path
 };
 
 use serde::Serialize;
@@ -111,7 +111,7 @@ pub fn create_report(report_path: &Path, tests: &Vec<String>, parts: u8) -> Resu
             // return Err(Error::new(ErrorKind::NotFound, format!("{} is a test but wasn't run for all students", test)))
         }
     }
-    _create_report(report_path, tests).map_err(|e| {
+    _create_report(report_path, tests, parts).map_err(|e| {
         if report_path.exists() {
             remove_dir_all(report_path)
                 .expect("Create report and deleting report directory during cleanup failed");
@@ -120,13 +120,8 @@ pub fn create_report(report_path: &Path, tests: &Vec<String>, parts: u8) -> Resu
     })
 }
 
-fn _create_report(report_root: &Path, tests: &Vec<String>) -> Result<()> {
-    report_initialize(report_root).map_err(|e| {
-        Error::new(
-            ErrorKind::Other,
-            format!("Failed to initialize report: {}", e),
-        )
-    })?;
+fn _create_report(report_root: &Path, tests: &Vec<String>, parts: u8) -> Result<()> {
+    let parts = usize::from(parts);
     let students = list_students();
     if students.is_empty() {
         return Ok(());
@@ -134,6 +129,31 @@ fn _create_report(report_root: &Path, tests: &Vec<String>) -> Result<()> {
 
     let mut handlebars = Handlebars::new();
     initialize_handlebars(&mut handlebars)?;
+
+    if parts == 1 {
+        _create_report_of_certain_students(&report_root, tests, &students, &handlebars)?;
+    } else {
+        create_dir_all(report_root)?;
+
+        let students_per_part = students.len().div_ceil(usize::from(parts));
+        for i in 0..parts {
+            let students_section = &students[students_per_part*i..(students_per_part*(i+1)).min(students.len())];
+            if students_section.len() > 0 {
+                _create_report_of_certain_students(&report_root.join(i.to_string()), tests, students_section, &handlebars)?;
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn _create_report_of_certain_students(report_root: &Path, tests: &Vec<String>, students: &[String], handlebars: &Handlebars) -> Result<()> {
+    report_initialize(report_root).map_err(|e| {
+        Error::new(
+            ErrorKind::Other,
+            format!("Failed to initialize report: {}", e),
+        )
+    })?;
 
     create_tests_page_html(&report_root.join("tests.html"), &handlebars)?;
     create_report_student_list(&report_root.join("index.html"), &students, &handlebars)?;

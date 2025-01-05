@@ -4,16 +4,15 @@ __Current__
 Parse XML file better? 
 mvn -Dtest=AllSequentialTests surefire-report:report
 Download project better. Should include test dir and src/main instead of project/main
-Iframe to all tests for TA's to Cmd-F
 
 __Later__
 - Parsing of result files
   - What if is run multiple times and fails 3/5? 
   - Can we actually parse the result files? 
 - Check for plagiarism
-- frontend
 - Locate anomolies: Very large diff, long runnings tests
 - Summarize results
+- Compile error reasoning. 
 
 __Minor__
 - Remove all files and directories from project that do not belong
@@ -25,3 +24,25 @@ __Done__
 - Make parallelizable, project/ 
 - Download 
 - List all results
+
+# Run in VM's or some other way for security reasons. 
+# Make it work for other langauges
+## Protocol
+Grading skel
+| -- src
+| -- tests
+
+Student zipfile
+| -- src
+| -- test (Optional)
+
+## Needs adapters
+- extracting config files (eg. pom.xml)
+- compile commands
+- testing commands
+- Reading test files
+- Finding test files
+- Displaying test results on the frontend
+
+## Make it work for other sources
+- Change create project
