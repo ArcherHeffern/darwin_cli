@@ -36,3 +36,11 @@ a:hover {
 .button {
     text-decoration: underline;
 }
+
+summary {
+    cursor:pointer;
+}
+
+#student-list {
+    text-decoration: underline;
+}

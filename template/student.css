@@ -26,18 +26,28 @@ header {
     width: 100%;
 }
 
-#left-sidebar.open {
-    width: fit-content;
+#left-sidebar.open,
+#right-sidebar.open {
     padding-right: 10px;
     padding-left: 10px;
+    overflow-x: scroll;
+}
+
+#left-sidebar.open {
+ width: fit-content;
+}
+
+#right-sidebar.open {
+    width: 400px;
+    overflow-wrap: break-word;
 }
 
 #left-sidebar {
     display: flex;
     flex-direction: column;
 }
-#left-sidebar,
-#right-sidebar {
+#left-sidebar:not(.open),
+#right-sidebar:not(.open) {
     width: 0;
     overflow: hidden; /* Hide content when collapsed */
 }
@@ -73,6 +83,7 @@ h1 {
     flex-grow: 1;
     display: flex;
     flex-direction: column;
+    min-width: 0;
 }
 
 code {
@@ -85,8 +96,6 @@ code {
     display: flex;
     flex-direction: column;
     min-width: 0;
-    padding-right: 20px;
-    padding-left: 20px;
 }
 
 h3 {
@@ -123,10 +132,4 @@ p,
 details,
 summary {
     font-size: 14px;
-}
-
-#right-sidebar.open {
-    padding-right: 10px;
-    padding-left: 10px;
-    width: 400px;
 }
