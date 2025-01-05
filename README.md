@@ -1,3 +1,7 @@
+# Installation
+https://crates.io/crates/darwin_cli  
+`cargo install darwin_cli`
+
 # Usage
 `cargo run -- ` : Shows help  
 `cargo run -- create-project PROJECT_SKELETON MOODLE_SUBMISSIONS_ZIPFILE` : Initialize darwin  
