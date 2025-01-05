@@ -1,5 +1,5 @@
 use std::fs::{self, File, OpenOptions};
-use std::io::{Error, ErrorKind, Read, Result};
+use std::io::{BufRead, BufReader, Error, ErrorKind, Read, Result};
 use std::path::Path;
 
 use handlebars::Handlebars;
@@ -150,14 +150,15 @@ fn process_file(path: &Path) -> Result<Tlsh> {
     _process_file(file)
 }
 
-fn _process_file(mut file: File) -> Result<Tlsh> {
+fn _process_file(file: File) -> Result<Tlsh> {
     let mut builder = TlshBuilder::new(
         Bucket128,
         OneByte,
         Version4,
     );
+
+    // let file = BufReader::new(file);
     let mut buf = Vec::new();
-    file.read_to_end(&mut buf)?;
     builder.update(&mut buf);
     builder.build().map_err(|e|Error::new(ErrorKind::Other, e.to_string()))
 }

@@ -5,7 +5,7 @@ use std::{
 };
 
 use crate::{
-    clean, config::darwin_root, create_darwin, create_report, download_results, list_students::{self}, list_tests, plagiarism_checker, run_tests::{self}, types::TestResultError, util::prompt_yn, view_student_results, view_student_submission
+    anonomize, clean, config::darwin_root, create_darwin, create_report, download_results, list_students::{self}, list_tests, plagiarism_checker, run_tests::{self}, types::TestResultError, util::prompt_yn, view_student_results, view_student_submission
 };
 
 pub fn create_darwin(
@@ -225,4 +225,9 @@ pub fn clean() {
     if let Err(e) = clean::clean() {
         eprintln!("Error cleaning: {}", e);
     }
+}
+
+pub fn anonomize() {
+    anonomize::anonomize();
+    println!("Done");
 }

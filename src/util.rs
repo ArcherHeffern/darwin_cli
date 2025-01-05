@@ -6,6 +6,7 @@ use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::{fs::File, io, path::Path};
 
+use tempfile::NamedTempFile;
 use zip::result::ZipError;
 use zip::ZipArchive;
 
@@ -315,4 +316,94 @@ pub fn file_append_line(file: &Path, line: &str) -> Result<()> {
     let mut f = OpenOptions::new().append(true).open(file)?;
     writeln!(f, "{}", line)?;
     Ok(())
+}
+
+pub fn file_replace_line(filename: &Path, prev: &str, new: &str) -> Result<()> {
+    let tempfile = NamedTempFile::new()?;
+    let reader = File::open(filename)?;
+    let mut reader = BufReader::new(reader);
+    let mut writer = BufWriter::new(tempfile);
+
+    buffer_flatmap(&mut reader, &mut writer, |line| {
+        if line.contains(prev) {
+            return Some(new.to_string());
+        }
+        Some(line.to_string())
+    }
+    )?;
+    writer.into_inner()?.persist(filename)?;
+
+    Ok(())
+}
+
+fn buffer_flatmap<R: std::io::Read, W: std::io::Write>(reader: &mut BufReader<R>, writer: &mut BufWriter<W>, func: impl Fn(&str)->Option<String>) -> Result<()> {
+    // Returns the number of lines changed
+    // Does not exclude the newline
+    let mut buf = String::new();
+    loop {
+        buf.clear();
+        match reader.read_line(&mut buf) {
+            Ok(0) => {
+                break;
+            }
+            Ok(_) => {
+                match func(&buf[..buf.len()]) {
+                    Some(res) => {
+                        writer.write(res.as_bytes())?;
+                    }
+                    None => {}
+                }
+            }
+            Err(e) => {
+                return Err(e);
+            }
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{fs::File, io::Read};
+
+    use crate::util::buffer_flatmap;
+
+    use super::{file_replace_line, BufReader, BufWriter, Write};
+
+
+    #[test]
+    fn buffer_filter_test() {
+        let source = String::from("Hello\nworld\nHow\nAre");
+        let dest = Vec::new();
+        let mut reader = BufReader::new(source.as_bytes());
+        let mut writer = BufWriter::new(dest);
+        buffer_flatmap(&mut reader, &mut writer, |line|{
+            if line.contains("Hello") {
+                return None;
+            }
+            return Some(line.to_string());
+        }).unwrap();
+        writer.flush().unwrap();
+
+        let actual = writer.into_inner().unwrap();
+        let expected = String::from("world\nHow\nAre");
+        dbg!(std::str::from_utf8(&actual).unwrap());
+        assert_eq!(actual, expected.as_bytes());
+    }
+
+    #[test]
+    fn file_replace_line_test() {
+        let mut f = tempfile::NamedTempFile::new().unwrap();
+        write!(f, "a\nb\na\na\naa\n\nbb").unwrap();
+        f.as_file_mut().flush().unwrap();
+        file_replace_line(f.path(), "a", "c\n").unwrap();
+
+        let mut actual_contents = String::new();
+        let mut file = File::open(f.path()).unwrap();
+        file.read_to_string(&mut actual_contents).unwrap(); // Read the contents after modification
+
+    let expected_contents = "c\nb\nc\nc\nc\n\nbb";
+
+    assert_eq!(actual_contents, expected_contents); 
+    }
 }
