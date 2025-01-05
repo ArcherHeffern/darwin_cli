@@ -110,7 +110,9 @@ pub fn view_all_results(test: &str, summarize: bool) {
 
 pub fn download_results_summary(test: &str, outfile: &str) {
     let out_file_path = Path::new(outfile);
-    if out_file_path.exists() && !prompt_yn(&format!("{} Exists. Continue? (y/n)", outfile)).unwrap_or(false) {
+    if out_file_path.exists()
+        && !prompt_yn(&format!("{} Exists. Continue? (y/n)", outfile)).unwrap_or(false)
+    {
         return;
     }
     let out_file = OpenOptions::new()
@@ -123,7 +125,9 @@ pub fn download_results_summary(test: &str, outfile: &str) {
 }
 pub fn download_results_by_classname(test: &str, outfile: &str) {
     let out_file = Path::new(outfile);
-    if out_file.exists() && !prompt_yn(&format!("{} Exists. Continue? (y/n)", outfile)).unwrap_or(false) {
+    if out_file.exists()
+        && !prompt_yn(&format!("{} Exists. Continue? (y/n)", outfile)).unwrap_or(false)
+    {
         return;
     }
     download_results::download_results_by_classname(out_file, test).unwrap();
@@ -131,12 +135,15 @@ pub fn download_results_by_classname(test: &str, outfile: &str) {
 
 pub fn view_student_submission(student: &str) {
     let dest = Path::new(student);
-    if dest.exists() && !prompt_yn(&format!("'{}' Exists. Continue? (Y/N)", student)).unwrap_or(false) {
+    if dest.exists()
+        && !prompt_yn(&format!("'{}' Exists. Continue? (Y/N)", student)).unwrap_or(false)
+    {
         println!("Aborting...");
         return;
     }
     if (dest.is_file() && remove_file(dest).is_err())
-    || (dest.is_dir() && remove_dir_all(dest).is_err()) {
+        || (dest.is_dir() && remove_dir_all(dest).is_err())
+    {
         eprintln!("Failed to remove {:?}", dest);
         return;
     }
@@ -147,7 +154,9 @@ pub fn view_student_submission(student: &str) {
 }
 
 pub fn create_report(report_path: &Path, parts: u8, tests: &Vec<String>) {
-    if report_path.exists() && !prompt_yn(&format!("{:?} Exists. Continue? (y/n)", report_path)).unwrap_or(false) {
+    if report_path.exists()
+        && !prompt_yn(&format!("{:?} Exists. Continue? (y/n)", report_path)).unwrap_or(false)
+    {
         return;
     }
 
@@ -157,7 +166,8 @@ pub fn create_report(report_path: &Path, parts: u8, tests: &Vec<String>) {
     }
 
     if (report_path.is_file() && remove_file(report_path).is_err())
-    || (report_path.is_dir() && remove_dir_all(report_path).is_err()) {
+        || (report_path.is_dir() && remove_dir_all(report_path).is_err())
+    {
         eprintln!("Failed to remove {:?}", report_path);
         return;
     }

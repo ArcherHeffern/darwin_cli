@@ -1,6 +1,5 @@
 use std::{collections::HashMap, io::Error, time::Duration};
 
-
 pub struct TestResults {
     pub student: String,
     pub test: String,
@@ -47,13 +46,13 @@ impl TestResults {
 
     pub fn group_by_classname(&self) -> Option<HashMap<String, Vec<&TestResult>>> {
         match &self.state {
-            TestState::CompilationError => {
-                None
-            },
+            TestState::CompilationError => None,
             TestState::Ok { results } => {
                 let mut m: HashMap<String, Vec<&TestResult>> = HashMap::new();
                 for result in results.iter() {
-                    m.entry(result.classname.clone()).and_modify(|e|e.push(result)).or_default();
+                    m.entry(result.classname.clone())
+                        .and_modify(|e| e.push(result))
+                        .or_default();
                 }
                 Some(m)
             }
@@ -67,13 +66,15 @@ impl TestResults {
                 let mut m: HashMap<String, (i32, i32, i32)> = HashMap::new();
                 for (_, v) in s.iter() {
                     for res in v.iter() {
-                        m.entry(res.classname.clone()).and_modify(|item| {
-                            match res.msg {
-                                StatusMsg::None => item.0 += 1,
-                                StatusMsg::Error {..} => item.1 += 1,
-                                StatusMsg::Failure { .. } => item.2 += 1
-                            };
-                        }).or_insert((0, 0, 0));
+                        m.entry(res.classname.clone())
+                            .and_modify(|item| {
+                                match res.msg {
+                                    StatusMsg::None => item.0 += 1,
+                                    StatusMsg::Error { .. } => item.1 += 1,
+                                    StatusMsg::Failure { .. } => item.2 += 1,
+                                };
+                            })
+                            .or_insert((0, 0, 0));
                     }
                 }
                 Some(m)

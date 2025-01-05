@@ -4,23 +4,27 @@ use config::darwin_root;
 use std::path::{Path, PathBuf};
 use std::{collections::HashSet, fs};
 
+mod clean;
 mod commands;
+mod config;
 mod create_darwin;
-mod run_tests;
+mod create_report;
+mod download_results;
 mod list_students;
 mod list_tests;
+mod run_tests;
+mod types;
 mod util;
 mod view_student_results;
-mod download_results;
 mod view_student_submission;
-mod create_report;
-mod clean;
-mod config;
-mod types;
-
 
 #[derive(Parser, Debug)]
-#[command(name = "Darwin", version = "1.0", author = "Archer Heffern", about = "Auto grader for Maven projects submitted to Moodle")]
+#[command(
+    name = "Darwin",
+    version = "1.0",
+    author = "Archer Heffern",
+    about = "Auto grader for Maven projects submitted to Moodle"
+)]
 struct Cli {
     /// Name of the person to greet
     #[command(subcommand)]
@@ -45,7 +49,7 @@ enum SubCommand {
     },
     TestAll {
         tests: String,
-        num_threads: Option<usize>
+        num_threads: Option<usize>,
     },
     ViewStudentResultSummary {
         student: String,
@@ -53,30 +57,29 @@ enum SubCommand {
     },
     ViewStudentResultByClassName {
         student: String,
-        test: String
+        test: String,
     },
     ViewAllStudentsResultsSummary {
-        test: String
+        test: String,
     },
     ViewAllStudentsResultsByClassName {
-        test: String
+        test: String,
     },
     DownloadResultsSummary {
         test: String,
-        outfile: String
+        outfile: String,
     },
     DownloadResultsByClassName {
         test: String,
-        outfile: String
+        outfile: String,
     },
     CreateReport {
         dest_path: Utf8PathBuf,
         parts: u8,
-        tests: Vec<String>
+        tests: Vec<String>,
     },
-    Clean
+    Clean,
 }
-
 
 fn main() {
     let mut copy_ignore_set = HashSet::new();
@@ -116,16 +119,10 @@ fn main() {
             commands::list_students();
         }
         SubCommand::TestStudent { student, tests } => {
-            commands::run_test_for_student(
-                student.as_str(),
-                tests.as_str(),
-            );
-        },
+            commands::run_test_for_student(student.as_str(), tests.as_str());
+        }
         SubCommand::TestAll { tests, num_threads } => {
-            commands::run_tests(
-                tests.as_str(),
-                num_threads.unwrap_or(1)
-            )
+            commands::run_tests(tests.as_str(), num_threads.unwrap_or(1))
         }
         SubCommand::ViewStudentResultSummary { student, test } => {
             commands::view_student_result(&student, &test, true);
@@ -148,10 +145,14 @@ fn main() {
         SubCommand::ViewStudentSubmission { student } => {
             commands::view_student_submission(student.as_str());
         }
-        SubCommand::CreateReport { dest_path, parts, tests } => {
+        SubCommand::CreateReport {
+            dest_path,
+            parts,
+            tests,
+        } => {
             commands::create_report(dest_path.as_std_path(), parts, &tests);
         }
-        SubCommand::Clean  => {
+        SubCommand::Clean => {
             commands::clean();
         }
     }

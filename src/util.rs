@@ -19,7 +19,7 @@ pub fn prompt_yn(prompt: &str) -> Result<bool> {
     stdout.flush()?;
     let mut line = String::new();
     let size = stdin.lock().read_line(&mut line)?;
-    Ok(line.as_str()[..size-1].to_lowercase() == "y")
+    Ok(line.as_str()[..size - 1].to_lowercase() == "y")
 }
 
 pub fn copy_dir_all(
@@ -246,11 +246,7 @@ pub fn recreate_student_main(
         return Err(Error::new(ErrorKind::Other, "Expected dir"));
     }
 
-    patch(
-        &main_dir(),
-        diff_path,
-        main_dest_dir,
-    )?;
+    patch(&main_dir(), diff_path, main_dest_dir)?;
     fs::rename(main_dest_dir.join("pom.xml"), pom_dest_dir.join("pom.xml"))?;
     Ok(())
 }

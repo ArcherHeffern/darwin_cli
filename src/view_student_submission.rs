@@ -1,5 +1,8 @@
 use std::{
-    collections::HashSet, fs::rename, io::{Error, Result}, path::Path
+    collections::HashSet,
+    fs::rename,
+    io::{Error, Result},
+    path::Path,
 };
 
 use crate::{
