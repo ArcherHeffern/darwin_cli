@@ -1,4 +1,3 @@
-#[macro_use] extern crate rocket;
 use camino::Utf8PathBuf;
 use clap::{Parser, Subcommand};
 use config::darwin_root;
@@ -14,7 +13,6 @@ mod util;
 mod view_student_results;
 mod download_results;
 mod view_student_submission;
-mod server;
 mod create_report;
 mod clean;
 mod config;
@@ -73,9 +71,9 @@ enum SubCommand {
     },
     CreateReport {
         dest_path: Utf8PathBuf,
+        parts: u8,
         tests: Vec<String>
     },
-    Server,
     Clean
 }
 
@@ -150,11 +148,8 @@ fn main() {
         SubCommand::ViewStudentSubmission { student } => {
             commands::view_student_submission(student.as_str());
         }
-        SubCommand::CreateReport { dest_path, tests } => {
-            commands::create_report(dest_path.as_std_path(), &tests);
-        }
-        SubCommand::Server => {
-            commands::server();
+        SubCommand::CreateReport { dest_path, parts, tests } => {
+            commands::create_report(dest_path.as_std_path(), parts, &tests);
         }
         SubCommand::Clean  => {
             commands::clean();

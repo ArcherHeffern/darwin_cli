@@ -11,7 +11,6 @@ use crate::{
     list_students::{self},
     list_tests,
     run_tests::{self},
-    server,
     types::TestResultError,
     util::prompt_yn,
     view_student_results, view_student_submission,
@@ -155,11 +154,16 @@ pub fn view_student_submission(student: &str) {
     };
 }
 
-pub fn create_report(report_path: &Path, tests: &Vec<String>) {
+pub fn create_report(report_path: &Path, parts: u8, tests: &Vec<String>) {
     if report_path.exists() {
         if !prompt_yn(&format!("{:?} Exists. Continue? (y/n)", report_path)).unwrap_or(false) {
             return;
         }
+    }
+
+    if parts == 0 {
+        eprintln!("Cannot split report into 0 parts");
+        return;
     }
 
     if report_path.is_file() && remove_file(report_path).is_err() {
@@ -170,7 +174,7 @@ pub fn create_report(report_path: &Path, tests: &Vec<String>) {
         return;
     }
 
-    match create_report::create_report(report_path, tests) {
+    match create_report::create_report(report_path, tests, parts) {
         Ok(()) => {
             println!("Report generated");
         }
@@ -178,13 +182,6 @@ pub fn create_report(report_path: &Path, tests: &Vec<String>) {
             eprintln!("Error generating report: {}", e);
         }
     }
-}
-
-pub fn server() {
-    if let Err(e) = server::server() {
-        eprintln!("{}", e);
-    }
-    println!("Done");
 }
 
 pub fn clean() {

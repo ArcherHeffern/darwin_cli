@@ -12,7 +12,74 @@ use crate::{
     }, view_student_results::parse_test_results
 };
 
-pub fn create_report(report_path: &Path, tests: &Vec<String>) -> Result<()> {
+#[derive(Serialize)]
+struct StudentTemplateContext<'a> {
+    file: &'a str,
+    files: &'a Vec<StudentTemplateFile>,
+    code: &'a str,
+    test_contexts: &'a Vec<TestPackageContext<'a>>,
+    prev_student: &'a str,
+    student: &'a str,
+    next_student: &'a str,
+}
+
+#[derive(Serialize)]
+struct TestPackageContext<'a> {
+    test_package_name: &'a str,
+    subpackages: Vec<TestSubpackageContext>,
+    compile_error: bool,
+    other_error: bool,
+    not_ran: bool
+}
+
+#[derive(Serialize)]
+struct TestSubpackageContext {
+    subpackage_name: String,
+    passing_tests: Vec<TestContext>,
+    failing_tests: Vec<TestContext>,
+}
+
+#[derive(Serialize)]
+struct TestContext {
+    pub name: String,
+    pub classname: String,
+    pub time: String,
+    pub msg: String,
+    pub type_: String,
+}
+
+#[derive(Serialize)]
+struct TestPageContext {
+    files: Vec<TestPageFileContext>
+}
+
+#[derive(Serialize)]
+struct TestPageFileContext {
+    test_file_name: String,
+    test_file_contents: String,
+}
+
+#[derive(Serialize)]
+struct StudentListContext<'a> {
+    students: &'a [String],
+}
+
+#[derive(Serialize)]
+struct StudentTemplateFile {
+    java_path: String,
+    html_path: String,
+}
+
+#[derive(Serialize)]
+struct StudentIndexTemplateContext<'a> {
+    student: &'a str,
+    prev_student: &'a str,
+    next_student: &'a str,
+    files: &'a Vec<StudentTemplateFile>,
+    test_contexts: &'a Vec<TestPackageContext<'a>>
+}
+
+pub fn create_report(report_path: &Path, tests: &Vec<String>, parts: u8) -> Result<()> {
     if !darwin_root().is_dir() {
         return Err(Error::new(
             ErrorKind::NotFound,
@@ -86,11 +153,6 @@ fn initialize_handlebars(handlebars: &mut Handlebars) -> Result<()> {
     handlebars.register_template_string("student_template", include_str!("../template/student.hbs"))
         .map_err(|e| Error::new(ErrorKind::Other, e.to_string()))?;
     Ok(())
-}
-
-#[derive(Serialize)]
-struct StudentListContext<'a> {
-    students: &'a [String],
 }
 
 fn report_initialize(report_root: &Path) -> Result<()> {
@@ -240,15 +302,6 @@ fn _create_student_report(
     Ok(())
 }
 
-#[derive(Serialize)]
-struct StudentIndexTemplateContext<'a> {
-    student: &'a str,
-    prev_student: &'a str,
-    next_student: &'a str,
-    files: &'a Vec<StudentTemplateFile>,
-    test_contexts: &'a Vec<TestPackageContext<'a>>
-}
-
 fn create_student_index(
     student: &str,
     files: &Vec<StudentTemplateFile>,
@@ -258,42 +311,6 @@ fn create_student_index(
     test_contexts: &Vec<TestPackageContext>,
 ) -> Result<String> {
     handlebars.render("student_index_template", &StudentIndexTemplateContext { student, files, prev_student, next_student, test_contexts }).map_err(|e|Error::new(ErrorKind::Other, e))
-}
-#[derive(Serialize)]
-struct StudentTemplateContext<'a> {
-    file: &'a str,
-    files: &'a Vec<StudentTemplateFile>,
-    code: &'a str,
-    test_contexts: &'a Vec<TestPackageContext<'a>>,
-    prev_student: &'a str,
-    student: &'a str,
-    next_student: &'a str,
-
-}
-
-#[derive(Serialize)]
-struct TestPackageContext<'a> {
-    test_package_name: &'a str,
-    subpackages: Vec<TestSubpackageContext>,
-    compile_error: bool,
-    other_error: bool,
-    not_ran: bool
-}
-
-#[derive(Serialize)]
-struct TestSubpackageContext {
-    subpackage_name: String,
-    passing_tests: Vec<TestContext>,
-    failing_tests: Vec<TestContext>,
-}
-
-#[derive(Serialize)]
-struct TestContext {
-    pub name: String,
-    pub classname: String,
-    pub time: String,
-    pub msg: String,
-    pub type_: String,
 }
 
 impl TestContext {
@@ -313,12 +330,6 @@ impl TestContext {
     }
 }
 
-#[derive(Serialize)]
-struct StudentTemplateFile {
-    java_path: String,
-    html_path: String,
-}
-
 fn create_student_report_html(
     file: &str,
     code: String,
@@ -330,17 +341,6 @@ fn create_student_report_html(
     handlebars: &Handlebars
 ) -> Result<String> {
     handlebars.render("student_template", &StudentTemplateContext { file, files: &files, code: &code, test_contexts, prev_student, student, next_student }).map_err(|e|Error::new(ErrorKind::Other, e.to_string()))
-}
-
-#[derive(Serialize)]
-struct TestPageContext {
-    files: Vec<TestPageFileContext>
-}
-
-#[derive(Serialize)]
-struct TestPageFileContext {
-    test_file_name: String,
-    test_file_contents: String,
 }
 
 fn create_tests_page_html(

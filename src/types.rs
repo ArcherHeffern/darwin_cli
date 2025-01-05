@@ -1,17 +1,12 @@
 use std::{collections::HashMap, io::Error, time::Duration};
 
-use rocket::serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize, Serialize)]
-#[serde(crate = "rocket::serde")]
 pub struct TestResults {
     pub student: String,
     pub test: String,
     pub state: TestState,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-#[serde(crate = "rocket::serde")]
 pub enum TestState {
     CompilationError,
     Ok { results: Vec<TestResult> },
@@ -94,8 +89,6 @@ impl TestResults {
 
 #[derive(Debug)]
 #[allow(dead_code)]
-#[derive(Deserialize, Serialize, Clone)]
-#[serde(crate = "rocket::serde")]
 pub struct TestResult {
     pub name: String,
     pub classname: String,
@@ -103,8 +96,7 @@ pub struct TestResult {
     pub msg: StatusMsg,
 }
 
-#[derive(Debug, PartialEq, Deserialize, Serialize, Clone)]
-#[serde(crate = "rocket::serde")]
+#[derive(Debug, PartialEq)]
 pub enum StatusMsg {
     None,
     Failure {
