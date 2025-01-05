@@ -48,12 +48,12 @@ impl TestResults {
     pub fn group_by_classname(&self) -> Option<HashMap<String, Vec<&TestResult>>> {
         match &self.state {
             TestState::CompilationError => {
-                return None;
+                None
             },
             TestState::Ok { results } => {
                 let mut m: HashMap<String, Vec<&TestResult>> = HashMap::new();
                 for result in results.iter() {
-                    m.entry(result.classname.clone()).and_modify(|e|e.push(result)).or_insert(Vec::new());
+                    m.entry(result.classname.clone()).and_modify(|e|e.push(result)).or_default();
                 }
                 Some(m)
             }

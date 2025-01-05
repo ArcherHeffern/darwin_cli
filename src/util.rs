@@ -229,7 +229,7 @@ pub fn create_student_project(project_path: &Path, diff_path: &Path) -> Result<(
     recreate_student_main(
         diff_path,
         &project_path.join("src").join("main"),
-        &project_path,
+        project_path,
     )?;
 
     Ok(())

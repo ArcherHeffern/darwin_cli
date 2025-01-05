@@ -44,7 +44,7 @@ pub fn view_student_submission(student: &str, dest: &Path) -> Result<()> {
 
 fn _view_student_submission(dest: &Path, student_diff_path: &Path) -> Result<()> {
     patch(&main_dir(), student_diff_path, &dest.join("src"))?;
-    rename(&dest.join("src").join("pom.xml"), dest.join("pom.xml"))?;
+    rename(dest.join("src").join("pom.xml"), dest.join("pom.xml"))?;
     copy_dir_all(test_dir(), dest.join("src").join("test"), &HashSet::new())?;
     Ok(())
 }

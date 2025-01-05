@@ -111,12 +111,12 @@ pub fn create_report(report_path: &Path, tests: &Vec<String>, parts: u8) -> Resu
             // return Err(Error::new(ErrorKind::NotFound, format!("{} is a test but wasn't run for all students", test)))
         }
     }
-    _create_report(report_path, tests, parts).map_err(|e| {
+    _create_report(report_path, tests, parts).inspect_err(|_| {
         if report_path.exists() {
-            remove_dir_all(report_path)
-                .expect("Create report and deleting report directory during cleanup failed");
+            if remove_dir_all(report_path).is_err() {
+                println!("Failed to cleanup");
+            }
         }
-        e
     })
 }
 
@@ -131,14 +131,14 @@ fn _create_report(report_root: &Path, tests: &Vec<String>, parts: u8) -> Result<
     initialize_handlebars(&mut handlebars)?;
 
     if parts == 1 {
-        _create_report_of_certain_students(&report_root, tests, &students, &handlebars)?;
+        _create_report_of_certain_students(report_root, tests, &students, &handlebars)?;
     } else {
         create_dir_all(report_root)?;
 
-        let students_per_part = students.len().div_ceil(usize::from(parts));
+        let students_per_part = students.len().div_ceil(parts);
         for i in 0..parts {
             let students_section = &students[students_per_part*i..(students_per_part*(i+1)).min(students.len())];
-            if students_section.len() > 0 {
+            if students_section.is_empty() {
                 _create_report_of_certain_students(&report_root.join(i.to_string()), tests, students_section, &handlebars)?;
             }
         }
@@ -155,9 +155,9 @@ fn _create_report_of_certain_students(report_root: &Path, tests: &Vec<String>, s
         )
     })?;
 
-    create_tests_page_html(&report_root.join("tests.html"), &handlebars)?;
-    create_report_student_list(&report_root.join("index.html"), &students, &handlebars)?;
-    create_student_reports(report_root, tests, &students, &handlebars)?;
+    create_tests_page_html(&report_root.join("tests.html"), handlebars)?;
+    create_report_student_list(&report_root.join("index.html"), students, handlebars)?;
+    create_student_reports(report_root, tests, students, handlebars)?;
 
     Ok(())
 }
@@ -211,20 +211,20 @@ fn create_student_reports(
         create_student_report(
             report_root,
             tests,
-            &prev_student,
-            &student,
+            prev_student,
+            student,
             &students[i + 1],
-            &handlebars
+            handlebars
         )?;
         prev_student = student;
     }
     create_student_report(
         report_root,
         tests,
-        &prev_student,
+        prev_student,
         &students[students.len() - 1],
         "",
-        &handlebars
+        handlebars
     )?;
     Ok(())
 }
@@ -242,7 +242,7 @@ fn create_student_report(
 
 fn _create_student_report(
     report_root: &Path,
-    tests: &Vec<String>,
+    tests: &[String],
     prev_student: &str,
     student: &str,
     next_student: &str,
@@ -277,8 +277,8 @@ fn _create_student_report(
                     Some(s) => {
                         let mut test_subpackage: Vec<TestSubpackageContext> = Vec::new();
                         for (k,v) in s {
-                            let passing_tests: Vec<TestContext> = v.iter().filter(|t|matches!(t.msg, StatusMsg::None)).map(|t|*t).map(|c|TestContext::from_test_result(c)).collect();
-                            let failing_tests: Vec<TestContext> = v.iter().filter(|t|!matches!(t.msg, StatusMsg::None)).map(|t|*t).map(|c|TestContext::from_test_result(c)).collect();
+                            let passing_tests: Vec<TestContext> = v.iter().filter(|t|matches!(t.msg, StatusMsg::None)).cloned().map(TestContext::from_test_result).collect();
+                            let failing_tests: Vec<TestContext> = v.iter().filter(|t|!matches!(t.msg, StatusMsg::None)).cloned().map(TestContext::from_test_result).collect();
                             test_subpackage.push(TestSubpackageContext { subpackage_name: k, passing_tests, failing_tests});
                         }
                         test_packages.push(TestPackageContext {test_package_name: &test_package_result.test, subpackages: test_subpackage, compile_error: false, other_error: false, not_ran: false});
@@ -301,7 +301,7 @@ fn _create_student_report(
     let student_root_file = create_student_index(student, &files, student_template, prev_student, next_student, &test_packages)?;
     fs::write(tmpdir.path().join("index.html"), student_root_file)?;
     for (i, file) in file_paths.iter().enumerate() {
-        let code = fs::read_to_string(&file)?;
+        let code = fs::read_to_string(file)?;
         let student_report = create_student_report_html(
             &files[i].java_path,
             code,
@@ -311,9 +311,8 @@ fn _create_student_report(
             student,
             next_student,
             student_template
-        ).map_err(|e| {
-            eprintln!("Failed to create report for {}", student);
-            e
+        ).inspect_err(|e| {
+            eprintln!("Failed to create report for {}: {}", student, e);
         })?;
         fs::write(file, student_report)?;
     }
@@ -337,8 +336,8 @@ impl TestContext {
     fn from_test_result(test_result: &TestResult) -> TestContext {
         let (msg, type_): (String, String) = match test_result.msg {
             StatusMsg::None => (String::new(), String::new()),
-            StatusMsg::Error { ref message, ref type_ } => (message.as_ref().map_or(String::new(), |v|String::from(v)), type_.clone()),
-            StatusMsg::Failure { ref message, ref type_ } => (message.as_ref().map_or(String::new(),|v|String::from(v)), type_.clone())
+            StatusMsg::Error { ref message, ref type_ } => (message.as_ref().map_or(String::new(), String::from), type_.clone()),
+            StatusMsg::Failure { ref message, ref type_ } => (message.as_ref().map_or(String::new(), String::from), type_.clone())
         };
         TestContext {
             name: test_result.name.clone(),
@@ -360,18 +359,18 @@ fn create_student_report_html(
     next_student: &str,
     handlebars: &Handlebars
 ) -> Result<String> {
-    handlebars.render("student_template", &StudentTemplateContext { file, files: &files, code: &code, test_contexts, prev_student, student, next_student }).map_err(|e|Error::new(ErrorKind::Other, e.to_string()))
+    handlebars.render("student_template", &StudentTemplateContext { file, files, code: &code, test_contexts, prev_student, student, next_student }).map_err(|e|Error::new(ErrorKind::Other, e.to_string()))
 }
 
 fn create_tests_page_html(
     dest: &Path,
     handlebars: &Handlebars
 ) -> Result<()> {
-    let files: Vec<TestPageFileContext> = list_files_recursively(&test_dir()).iter().map(|f| {
-        let test_file_name = f.file_name().ok_or_else(||0).map_err(|e|Error::new(ErrorKind::Other, e.to_string()))?.to_string_lossy().to_string();
+    let files: Vec<TestPageFileContext> = list_files_recursively(&test_dir()).iter().flat_map(|f| {
+        let test_file_name = f.file_name().ok_or(0).map_err(|e|Error::new(ErrorKind::Other, e.to_string()))?.to_string_lossy().to_string();
         let test_file_contents = fs::read_to_string(f)?;
         Ok::<TestPageFileContext, Error>(TestPageFileContext { test_file_name, test_file_contents})
-    }).flatten().collect();
+    }).collect();
 
     let s = handlebars.render("tests_template", &TestPageContext { files }).map_err(|e|Error::new(ErrorKind::Other, e.to_string()))?;
 
