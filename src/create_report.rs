@@ -258,7 +258,7 @@ fn create_report_student_list(
 
 fn create_student_reports(
     report_root: &Path,
-    tests: &Vec<String>,
+    tests: &[String],
     students: &[String],
     handlebars: &Handlebars,
 ) -> Result<()> {
