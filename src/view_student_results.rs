@@ -105,8 +105,9 @@ fn parse_surefire_report(
                     time = Duration::from_secs_f32(time_seconds);
                 } else if _name == failure {
                     let message = get_attr(&attributes, "message");
-                    let type_ = get_attr(&attributes, "type")
-                        .unwrap_or_else(|| panic!("{}: XML Failure must have type attribute", name));
+                    let type_ = get_attr(&attributes, "type").unwrap_or_else(|| {
+                        panic!("{}: XML Failure must have type attribute", name)
+                    });
                     let full_message = None;
                     msg = StatusMsg::Failure {
                         message,
@@ -115,8 +116,9 @@ fn parse_surefire_report(
                     };
                 } else if _name == error {
                     let message = get_attr(&attributes, "message");
-                    let type_ = get_attr(&attributes, "type")
-                        .unwrap_or_else(|| panic!("{}: XML Failure must have type attribute", name));
+                    let type_ = get_attr(&attributes, "type").unwrap_or_else(|| {
+                        panic!("{}: XML Failure must have type attribute", name)
+                    });
                     let full_message = None;
                     msg = StatusMsg::Error {
                         message,
