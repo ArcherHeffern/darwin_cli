@@ -12,7 +12,7 @@ fn _anonomize() {
     let tests = list_tests();
 
     for (i, student) in list_students().iter().enumerate() {
-        if anonomize_student(&student, i, &tests).is_err() {
+        if anonomize_student(student, i, &tests).is_err() {
             eprintln!("Failed to anonomize {}", student);
         }
     }

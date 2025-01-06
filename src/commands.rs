@@ -54,7 +54,7 @@ pub fn auto(project_skeleton: &Path, moodle_submissions_zipfile: &Path, copy_ign
 
     for selected_test in selected_tests.iter() {
         println!("Running test: {}", selected_test);
-        run_tests(&selected_test, num_threads);
+        run_tests(selected_test, num_threads);
     }
 
     let num_sections = match prompt_digit::<usize>("How many TA's will be grading? This will determine how many sections the report will be split into.") {
@@ -67,12 +67,9 @@ pub fn auto(project_skeleton: &Path, moodle_submissions_zipfile: &Path, copy_ign
         Err(_) => {
             let mut n_sections = 0;
             loop {
-                match prompt_digit::<usize>("...") {
-                    Ok(r) => {
-                        n_sections = r;
-                        break;
-                    }
-                    Err(_) => {}
+                if let Ok(r) = prompt_digit::<usize>("...") {
+                    n_sections = r;
+                    break;
                 }
             }
             n_sections
@@ -84,7 +81,7 @@ pub fn auto(project_skeleton: &Path, moodle_submissions_zipfile: &Path, copy_ign
 
 }
 
-fn auto_select_tests(tests: &Vec<String>) -> std::io::Result<Vec<String>> {
+fn auto_select_tests(tests: &[String]) -> std::io::Result<Vec<String>> {
     println!("Which Tests would you like to run? [index, done, quit]");
     let mut selected_indeces: HashSet<usize> = HashSet::new();
     let mut buf = String::new();

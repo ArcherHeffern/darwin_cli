@@ -33,7 +33,7 @@ fn input(prompt: &str) -> Result<String> {
     stdout.flush()?;
     let mut line = String::new();
     stdin.lock().read_line(&mut line)?;
-    return Ok(line);
+    Ok(line)
 }
 
 pub fn copy_dir_all(
@@ -362,7 +362,7 @@ pub fn buffer_flatmap<R: std::io::Read, W: std::io::Write>(reader: &mut BufReade
             Ok(_) => {
                 match func(&buf) {
                     Some(res) => {
-                        writer.write(res.as_bytes())?;
+                        writer.write_all(res.as_bytes())?;
                     }
                     None => {}
                 }

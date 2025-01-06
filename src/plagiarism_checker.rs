@@ -82,8 +82,8 @@ fn multidimensional_scaling(distance_matrix: Vec<Vec<f64>>) -> (Vec<f64>, Vec<f6
 
 fn normalize_vector(v: &mut [f64], max: f64) {
     // Normalizes vector between [0; max]
-    let mn = v.iter().min_by(|a, b| a.partial_cmp(b).unwrap()).unwrap_or(&0.0).clone();
-    let mx = v.iter().max_by(|a, b| a.partial_cmp(b).unwrap()).unwrap_or(&0.0).clone();
+    let mn = v.iter().min_by(|a, b| a.partial_cmp(b).unwrap()).copied().unwrap_or(0.0);
+    let mx = v.iter().max_by(|a, b| a.partial_cmp(b).unwrap()).copied().unwrap_or(0.0);
 
     if (mx - mn).abs() > f64::EPSILON {
         v.iter_mut().for_each(|a|{
@@ -121,11 +121,11 @@ fn create_plagiarism_report(dest_path: &Path, students: &[String], xs: &[f64], y
 }
 
 pub fn plagiarism_check_students(student1: &str, student2: &str) -> Result<usize> {
-    if !is_student(&student1) {
+    if !is_student(student1) {
         return Err(Error::new(ErrorKind::Other, format!("{} is not a student", student1)));
     }
 
-    if !is_student(&student2) {
+    if !is_student(student2) {
         return Err(Error::new(ErrorKind::Other, format!("{} is not a student", student2)));
     }
 
