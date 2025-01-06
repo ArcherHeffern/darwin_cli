@@ -4,6 +4,7 @@ use config::darwin_root;
 use std::path::{Path, PathBuf};
 use std::{collections::HashSet, fs};
 
+mod anonomize;
 mod clean;
 mod commands;
 mod config;
@@ -12,13 +13,12 @@ mod create_report;
 mod download_results;
 mod list_students;
 mod list_tests;
+mod plagiarism_checker;
 mod run_tests;
 mod types;
 mod util;
 mod view_student_results;
 mod view_student_submission;
-mod plagiarism_checker;
-mod anonomize;
 
 #[derive(Parser, Debug)]
 #[command(
@@ -93,7 +93,7 @@ enum SubCommand {
     },
     PlagiarismCheckStudents {
         student1: String,
-        student2: String, 
+        student2: String,
     },
     Anonomize,
     Clean,
@@ -111,7 +111,8 @@ fn main() {
 
     let command = cli.command;
     if matches!(command, SubCommand::CreateProject { .. })
-    || matches!(command, SubCommand::Auto { .. }) {
+        || matches!(command, SubCommand::Auto { .. })
+    {
     } else if !darwin_path.exists() {
         eprintln!("create project first");
         return;
@@ -131,8 +132,15 @@ fn main() {
         SubCommand::DeleteProject => {
             fs::remove_dir_all(darwin_root()).unwrap();
         }
-        SubCommand::Auto { project_skeleton, moodle_submissions_zipfile }=> {
-            commands::auto(project_skeleton.as_std_path(), moodle_submissions_zipfile.as_std_path(), &copy_ignore_set);
+        SubCommand::Auto {
+            project_skeleton,
+            moodle_submissions_zipfile,
+        } => {
+            commands::auto(
+                project_skeleton.as_std_path(),
+                moodle_submissions_zipfile.as_std_path(),
+                &copy_ignore_set,
+            );
         }
         SubCommand::ListTests => {
             commands::list_tests();
@@ -182,7 +190,7 @@ fn main() {
         }
         SubCommand::PlagiarismCheckStudents { student1, student2 } => {
             commands::plagiarism_check_students(student1, student2);
-        },
+        }
         SubCommand::Anonomize => {
             commands::anonomize();
         }

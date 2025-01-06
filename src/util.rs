@@ -17,8 +17,8 @@ use crate::{list_students, list_tests};
 
 pub fn prompt_digit<T: FromStr<Err = ParseIntError> + ToString>(prompt: &str) -> Result<T> {
     let line = input(prompt)?;
-    let line = &line[..line.len()-1];
-    T::from_str(line).map_err(|e|io::Error::new(ErrorKind::Other, e.to_string()))
+    let line = &line[..line.len() - 1];
+    T::from_str(line).map_err(|e| io::Error::new(ErrorKind::Other, e.to_string()))
 }
 
 pub fn prompt_yn(prompt: &str) -> Result<bool> {
@@ -342,14 +342,17 @@ pub fn file_replace_line(filename: &Path, prev: &str, new: &str) -> Result<()> {
             return Some(new.to_string());
         }
         Some(line.to_string())
-    }
-    )?;
+    })?;
     writer.into_inner()?.persist(filename)?;
 
     Ok(())
 }
 
-pub fn buffer_flatmap<R: std::io::Read, W: std::io::Write>(reader: &mut BufReader<R>, writer: &mut BufWriter<W>, func: impl Fn(&str)->Option<String>) -> Result<()> {
+pub fn buffer_flatmap<R: std::io::Read, W: std::io::Write>(
+    reader: &mut BufReader<R>,
+    writer: &mut BufWriter<W>,
+    func: impl Fn(&str) -> Option<String>,
+) -> Result<()> {
     // Returns the number of lines changed
     // Does not exclude the newline
     let mut buf = String::new();
@@ -359,14 +362,12 @@ pub fn buffer_flatmap<R: std::io::Read, W: std::io::Write>(reader: &mut BufReade
             Ok(0) => {
                 break;
             }
-            Ok(_) => {
-                match func(&buf) {
-                    Some(res) => {
-                        writer.write_all(res.as_bytes())?;
-                    }
-                    None => {}
+            Ok(_) => match func(&buf) {
+                Some(res) => {
+                    writer.write_all(res.as_bytes())?;
                 }
-            }
+                None => {}
+            },
             Err(e) => {
                 return Err(e);
             }
@@ -383,19 +384,19 @@ mod tests {
 
     use super::{file_replace_line, BufReader, BufWriter, Write};
 
-
     #[test]
     fn buffer_filter_test() {
         let source = String::from("Hello\nworld\nHow\nAre");
         let dest = Vec::new();
         let mut reader = BufReader::new(source.as_bytes());
         let mut writer = BufWriter::new(dest);
-        buffer_flatmap(&mut reader, &mut writer, |line|{
+        buffer_flatmap(&mut reader, &mut writer, |line| {
             if line.contains("Hello") {
                 return None;
             }
             return Some(line.to_string());
-        }).unwrap();
+        })
+        .unwrap();
         writer.flush().unwrap();
 
         let actual = writer.into_inner().unwrap();
@@ -415,8 +416,8 @@ mod tests {
         let mut file = File::open(f.path()).unwrap();
         file.read_to_string(&mut actual_contents).unwrap(); // Read the contents after modification
 
-    let expected_contents = "c\nb\nc\nc\nc\n\nbb";
+        let expected_contents = "c\nb\nc\nc\nc\n\nbb";
 
-    assert_eq!(actual_contents, expected_contents); 
+        assert_eq!(actual_contents, expected_contents);
     }
 }

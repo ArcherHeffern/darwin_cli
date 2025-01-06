@@ -39,12 +39,12 @@ pub enum StatusMsg {
     Failure {
         message: Option<String>,
         type_: String,
-        full_message: Option<String>
+        full_message: Option<String>,
     },
     Error {
         message: Option<String>,
         type_: String,
-        full_message: Option<String>
+        full_message: Option<String>,
     },
 }
 

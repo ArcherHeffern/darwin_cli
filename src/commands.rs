@@ -1,9 +1,20 @@
 use std::{
-    collections::HashSet, fs::{remove_dir_all, remove_file, OpenOptions}, io::{stdin, stdout, Write}, path::Path
+    collections::HashSet,
+    fs::{remove_dir_all, remove_file, OpenOptions},
+    io::{stdin, stdout, Write},
+    path::Path,
 };
 
 use crate::{
-    anonomize, clean, config::darwin_root, create_darwin, create_report, download_results, list_students::{self}, list_tests, plagiarism_checker, run_tests::{self}, types::TestResultError, util::{prompt_digit, prompt_yn}, view_student_results, view_student_submission
+    anonomize, clean,
+    config::darwin_root,
+    create_darwin, create_report, download_results,
+    list_students::{self},
+    list_tests, plagiarism_checker,
+    run_tests::{self},
+    types::TestResultError,
+    util::{prompt_digit, prompt_yn},
+    view_student_results, view_student_submission,
 };
 
 pub fn create_darwin(
@@ -33,9 +44,17 @@ pub fn create_darwin(
     true
 }
 
-pub fn auto(project_skeleton: &Path, moodle_submissions_zipfile: &Path, copy_ignore_set: &HashSet<&str>) {
+pub fn auto(
+    project_skeleton: &Path,
+    moodle_submissions_zipfile: &Path,
+    copy_ignore_set: &HashSet<&str>,
+) {
     // TODO: Allow user to make mistakes when inputting using prompt_digit
-    if !create_darwin(project_skeleton, moodle_submissions_zipfile, copy_ignore_set) {
+    if !create_darwin(
+        project_skeleton,
+        moodle_submissions_zipfile,
+        copy_ignore_set,
+    ) {
         return;
     }
 
@@ -46,9 +65,13 @@ pub fn auto(project_skeleton: &Path, moodle_submissions_zipfile: &Path, copy_ign
         return;
     }
 
-    let num_threads = prompt_digit::<usize>("How many threads would you like to use while running test? (Recommended 4)").inspect_err(|e|{
+    let num_threads = prompt_digit::<usize>(
+        "How many threads would you like to use while running test? (Recommended 4)",
+    )
+    .inspect_err(|e| {
         println!("{}", e);
-    }).unwrap(); // TODO: How to fix this control flow
+    })
+    .unwrap(); // TODO: How to fix this control flow
 
     let num_threads = num_threads.clamp(1, 8);
 
@@ -78,7 +101,6 @@ pub fn auto(project_skeleton: &Path, moodle_submissions_zipfile: &Path, copy_ign
 
     create_report(Path::new("report"), num_sections as u8, &selected_tests);
     plagiarism_check(Path::new("plagiarism.html"));
-
 }
 
 fn auto_select_tests(tests: &[String]) -> std::io::Result<Vec<String>> {
@@ -104,7 +126,7 @@ fn auto_select_tests(tests: &[String]) -> std::io::Result<Vec<String>> {
                 return Err(e);
             }
             Ok(_) => {
-                let buf = buf[..buf.len()-1].to_lowercase();
+                let buf = buf[..buf.len() - 1].to_lowercase();
                 if buf == "next" {
                     break;
                 } else if buf == "exit" {
@@ -127,7 +149,10 @@ fn auto_select_tests(tests: &[String]) -> std::io::Result<Vec<String>> {
         }
         println!();
     }
-    let selected_tests: Vec<String> = selected_indeces.iter().map(|index|tests[*index].clone()).collect();
+    let selected_tests: Vec<String> = selected_indeces
+        .iter()
+        .map(|index| tests[*index].clone())
+        .collect();
     Ok(selected_tests)
 }
 pub fn list_students() {
@@ -174,19 +199,17 @@ pub enum ViewMode {
 
 pub fn view_student_result(student: &str, test: &str, view_mode: &ViewMode) {
     match view_student_results::parse_test_results(student, test) {
-        Ok(result) => {
-            match view_mode {
-                ViewMode::Summarize => {
-                    println!("{}", result.summarize());
-                }
-                ViewMode::ClassName => {
-                    println!("{}", result.print());
-                }
-                ViewMode::Everything => {
-                    println!("{}", result.everything());
-                }
+        Ok(result) => match view_mode {
+            ViewMode::Summarize => {
+                println!("{}", result.summarize());
             }
-        }
+            ViewMode::ClassName => {
+                println!("{}", result.print());
+            }
+            ViewMode::Everything => {
+                println!("{}", result.everything());
+            }
+        },
         Err(e) => match e {
             TestResultError::IOError(er) => {
                 eprintln!("{}", er);
@@ -312,7 +335,10 @@ pub fn plagiarism_check(dest_path: &Path) {
 pub fn plagiarism_check_students(student1: String, student2: String) {
     match plagiarism_checker::plagiarism_check_students(&student1, &student2) {
         Ok(score) => {
-            println!("{} and {} have a similarity score of {}", student1, student2, score);
+            println!(
+                "{} and {} have a similarity score of {}",
+                student1, student2, score
+            );
         }
         Err(e) => {
             eprintln!("{}", e);
