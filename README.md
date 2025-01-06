@@ -1,5 +1,5 @@
 # About 
-The head TA is the only person who needs to know how to use this program. This tool will create HTML reports containing students source code (syntax highlighted), and their test results. Distribute these reports to your TA's.
+The head TA is the only person who needs to know how to use this program. This tool takes student submissions and the project skeleton as input, runs tests + scan for plagiarism and create HTML reports containing students source code (syntax highlighted), and their test results. Distribute these reports to your TA's for them to grade.
 
 ## Generated Report
 ![Demo](https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExZTd3NTFqZXJ6ZmxidHF3enoxZmkxaTRiNGdzcWtqa2dnZzEwemdociZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/R9k6iSHWqMY7GVIqAG/giphy.gif)
