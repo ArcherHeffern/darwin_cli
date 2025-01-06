@@ -362,12 +362,11 @@ pub fn buffer_flatmap<R: std::io::Read, W: std::io::Write>(
             Ok(0) => {
                 break;
             }
-            Ok(_) => match func(&buf) {
-                Some(res) => {
+            Ok(_) => {
+                if let Some(res) = func(&buf) {
                     writer.write_all(res.as_bytes())?;
                 }
-                None => {}
-            },
+            }
             Err(e) => {
                 return Err(e);
             }
@@ -394,7 +393,7 @@ mod tests {
             if line.contains("Hello") {
                 return None;
             }
-            return Some(line.to_string());
+            Some(line.to_string())
         })
         .unwrap();
         writer.flush().unwrap();

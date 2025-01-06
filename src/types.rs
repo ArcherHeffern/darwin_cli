@@ -1,4 +1,4 @@
-use std::{collections::HashMap, io::Error, time::Duration};
+use std::{collections::HashMap, fmt::Display, io::Error, time::Duration};
 
 pub struct TestResults {
     pub student: String,
@@ -27,9 +27,9 @@ pub struct TestResult {
     pub msg: StatusMsg,
 }
 
-impl ToString for TestResult {
-    fn to_string(&self) -> String {
-        format!("{}: {:?}", self.name, self.msg)
+impl Display for TestResult {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}: {:?}", self.name, self.msg)
     }
 }
 

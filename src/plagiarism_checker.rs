@@ -44,7 +44,7 @@ fn _plagiarism_check(dest_path: &Path) -> Result<()> {
 fn create_student_hashes(students: &[String]) -> Result<Vec<Option<Tlsh>>> {
     let mut student_hashes = Vec::new();
     for student in students {
-        let diff_path = student_diff_file(&student);
+        let diff_path = student_diff_file(student);
         let student_hash = match process_file(&diff_path)
             .inspect_err(|_| eprintln!("Failed to compute hash for {}", student))
         {
@@ -62,7 +62,7 @@ fn create_distance_matrix(hashes: Vec<Option<Tlsh>>) -> Vec<Vec<f64>> {
         for j in i + 1..hashes.len() {
             if let Some(h1) = &hashes[i] {
                 if let Some(h2) = &hashes[j] {
-                    out[i][j] = h1.diff(&h2, true) as f64;
+                    out[i][j] = h1.diff(h2, true) as f64;
                     out[j][i] = out[i][j];
                 }
             }
@@ -209,7 +209,7 @@ fn _process_file(file: File) -> Result<Tlsh> {
     })?;
 
     writer.flush()?;
-    builder.update(&mut writer.into_inner()?);
+    builder.update(&writer.into_inner()?);
     builder
         .build()
         .map_err(|e| Error::new(ErrorKind::Other, e.to_string()))

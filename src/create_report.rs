@@ -126,7 +126,7 @@ pub fn create_report(report_path: &Path, tests: &Vec<String>, parts: u8) -> Resu
     })
 }
 
-fn _create_report(report_root: &Path, tests: &Vec<String>, parts: u8) -> Result<()> {
+fn _create_report(report_root: &Path, tests: &[String], parts: u8) -> Result<()> {
     let parts = usize::from(parts);
     let students = list_students();
     if students.is_empty() {
@@ -161,7 +161,7 @@ fn _create_report(report_root: &Path, tests: &Vec<String>, parts: u8) -> Result<
 
 fn _create_report_of_certain_students(
     report_root: &Path,
-    tests: &Vec<String>,
+    tests: &[String],
     students: &[String],
     handlebars: &Handlebars,
 ) -> Result<()> {
@@ -325,7 +325,7 @@ fn _create_student_report(
         html_path.set_extension("html");
         let html_path = html_path
             .file_name()
-            .expect(&format!("File name should exist on {:?}", html_path));
+            .unwrap_or_else(|| panic!("File name should exist on {:?}", html_path));
         let html_path = html_path.to_string_lossy().to_string();
         let java_path = file_path
             .strip_prefix(tmpdir.path())
