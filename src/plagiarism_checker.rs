@@ -1,5 +1,5 @@
 use std::fs::{self, File, OpenOptions};
-use std::io::{BufRead, BufReader, Error, ErrorKind, Read, Result};
+use std::io::{BufRead, BufReader, BufWriter, Error, ErrorKind, Read, Result, Write};
 use std::path::Path;
 
 use handlebars::Handlebars;
@@ -8,7 +8,7 @@ use tlsh_fixed::{Tlsh, TlshBuilder, BucketKind::Bucket128, ChecksumKind::OneByte
 
 use crate::config::student_diff_file;
 use crate::list_students::list_students;
-use crate::util::is_student;
+use crate::util::{buffer_flatmap, is_student};
 use pcoa::apply_pcoa;
 use pcoa::nalgebra::DMatrix;
 
@@ -144,22 +144,33 @@ fn _plagiarism_check_students(student1: &str, student2: &str) -> Result<usize> {
     Ok(student1_hash.diff(&student2_hash, true))
 }
 
-// TODO: Can check later the performance improvement of removing the diff file format lines. Although it shouldn't make too much of a difference given all files will have this. 
 fn process_file(path: &Path) -> Result<Tlsh> {
     let file = OpenOptions::new().read(true).open(path)?;
     _process_file(file)
 }
 
 fn _process_file(file: File) -> Result<Tlsh> {
+    // Luckily, diff processes files in the same order so we don't need to do reordering. However, we should remove all lines for diffing
     let mut builder = TlshBuilder::new(
         Bucket128,
         OneByte,
         Version4,
     );
 
-    // let file = BufReader::new(file);
-    let mut buf = Vec::new();
-    builder.update(&mut buf);
+    let buf = Vec::new();
+    let mut reader = BufReader::new(file);
+    let mut writer = BufWriter::new(buf);
+
+    buffer_flatmap(&mut reader, &mut writer, |line| {
+        let line_copy = line.trim();
+        if line_copy.starts_with("diff -ruN") || line_copy.starts_with("---") || line_copy.starts_with("+++") || line_copy.starts_with("@@") {
+            return None;
+        }
+        Some(line.to_string())
+    })?;
+
+    writer.flush()?;
+    builder.update(&mut writer.into_inner()?);
     builder.build().map_err(|e|Error::new(ErrorKind::Other, e.to_string()))
 }
 

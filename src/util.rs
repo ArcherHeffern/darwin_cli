@@ -349,7 +349,7 @@ pub fn file_replace_line(filename: &Path, prev: &str, new: &str) -> Result<()> {
     Ok(())
 }
 
-fn buffer_flatmap<R: std::io::Read, W: std::io::Write>(reader: &mut BufReader<R>, writer: &mut BufWriter<W>, func: impl Fn(&str)->Option<String>) -> Result<()> {
+pub fn buffer_flatmap<R: std::io::Read, W: std::io::Write>(reader: &mut BufReader<R>, writer: &mut BufWriter<W>, func: impl Fn(&str)->Option<String>) -> Result<()> {
     // Returns the number of lines changed
     // Does not exclude the newline
     let mut buf = String::new();
@@ -360,7 +360,7 @@ fn buffer_flatmap<R: std::io::Read, W: std::io::Write>(reader: &mut BufReader<R>
                 break;
             }
             Ok(_) => {
-                match func(&buf[..buf.len()]) {
+                match func(&buf) {
                     Some(res) => {
                         writer.write(res.as_bytes())?;
                     }
