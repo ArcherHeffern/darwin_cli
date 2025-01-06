@@ -1,27 +1,25 @@
 use std::{
-    collections::HashSet,
-    fs::{remove_dir_all, remove_file, OpenOptions},
-    path::Path,
+    collections::HashSet, fs::{remove_dir_all, remove_file, OpenOptions}, io::{stdin, stdout, Write}, path::Path
 };
 
 use crate::{
-    anonomize, clean, config::darwin_root, create_darwin, create_report, download_results, list_students::{self}, list_tests, plagiarism_checker, run_tests::{self}, types::TestResultError, util::prompt_yn, view_student_results, view_student_submission
+    anonomize, clean, config::darwin_root, create_darwin, create_report, download_results, list_students::{self}, list_tests, plagiarism_checker, run_tests::{self}, types::TestResultError, util::{prompt_digit, prompt_yn}, view_student_results, view_student_submission
 };
 
 pub fn create_darwin(
     project_skeleton: &Path,
     moodle_submissions_zipfile: &Path,
     copy_ignore_set: &HashSet<&str>,
-) {
+) -> bool {
     if darwin_root().exists() {
         if !prompt_yn("Darwin project already exists in this directory. Override? (y/n)")
             .unwrap_or(false)
         {
-            return;
+            return false;
         }
         if remove_dir_all(darwin_root()).is_err() {
             eprintln!("Failed to delete darwin project");
-            return;
+            return false;
         }
     }
     if let Err(e) = create_darwin::create_darwin(
@@ -30,9 +28,111 @@ pub fn create_darwin(
         copy_ignore_set,
     ) {
         eprintln!("Error while creating darwin project: {}", e);
+        return false;
     }
+    true
 }
 
+pub fn auto(project_skeleton: &Path, moodle_submissions_zipfile: &Path, copy_ignore_set: &HashSet<&str>) {
+    // TODO: Allow user to make mistakes when inputting using prompt_digit
+    if !create_darwin(project_skeleton, moodle_submissions_zipfile, copy_ignore_set) {
+        return;
+    }
+
+    let tests: Vec<String> = crate::list_tests::list_tests().iter().cloned().collect();
+    let selected_tests = auto_select_tests(&tests).unwrap();
+    if selected_tests.is_empty() {
+        eprintln!("No tests selected. Exiting...");
+        return;
+    }
+
+    let num_threads = prompt_digit::<usize>("How many threads would you like to use while running test? (Recommended 4)").inspect_err(|e|{
+        println!("{}", e);
+    }).unwrap(); // TODO: How to fix this control flow
+
+    let num_threads = num_threads.clamp(1, 8);
+
+    for selected_test in selected_tests.iter() {
+        println!("Running test: {}", selected_test);
+        run_tests(&selected_test, num_threads);
+    }
+
+    let num_sections = match prompt_digit::<usize>("How many TA's will be grading? This will determine how many sections the report will be split into.") {
+        Ok(n) => {
+            if n == 666 {
+                eprintln!("✝️");
+            }
+            n
+        }
+        Err(_) => {
+            let mut n_sections = 0;
+            loop {
+                match prompt_digit::<usize>("...") {
+                    Ok(r) => {
+                        n_sections = r;
+                        break;
+                    }
+                    Err(_) => {}
+                }
+            }
+            n_sections
+        }
+    };
+
+    create_report(Path::new("report"), num_sections as u8, &selected_tests);
+    plagiarism_check(Path::new("plagiarism.html"));
+
+}
+
+fn auto_select_tests(tests: &Vec<String>) -> std::io::Result<Vec<String>> {
+    println!("Which Tests would you like to run? [index, done, quit]");
+    let mut selected_indeces: HashSet<usize> = HashSet::new();
+    let mut buf = String::new();
+    loop {
+        println!("TESTS");
+        for (i, test) in tests.iter().enumerate() {
+            if selected_indeces.contains(&i) {
+                println!("{}: ✅ {}", i, test);
+            } else {
+                println!("{}: ❌ {}", i, test);
+            }
+        }
+
+        buf.clear();
+        print!("next|exit|index >>> ");
+        stdout().flush().expect("Failed to flush stdout");
+        match stdin().read_line(&mut buf) {
+            Err(e) => {
+                eprintln!("Failed to read stdin: {}", e);
+                return Err(e);
+            }
+            Ok(_) => {
+                let buf = buf[..buf.len()-1].to_lowercase();
+                if buf == "next" {
+                    break;
+                } else if buf == "exit" {
+                    return Ok(Vec::new());
+                } else {
+                    match str::parse::<usize>(&buf) {
+                        Err(_) => {}
+                        Ok(index) => {
+                            if index >= tests.len() {
+                                continue;
+                            } else if selected_indeces.contains(&index) {
+                                selected_indeces.remove(&index);
+                            } else {
+                                selected_indeces.insert(index);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        println!();
+    }
+    let selected_tests: Vec<String> = selected_indeces.iter().map(|index|tests[*index].clone()).collect();
+    Ok(selected_tests)
+}
 pub fn list_students() {
     for student in list_students::list_students() {
         println!("{}", student);
@@ -157,31 +257,33 @@ pub fn view_student_submission(student: &str) {
     };
 }
 
-pub fn create_report(report_path: &Path, parts: u8, tests: &Vec<String>) {
+pub fn create_report(report_path: &Path, parts: u8, tests: &Vec<String>) -> bool {
     if report_path.exists()
         && !prompt_yn(&format!("{:?} Exists. Continue? (y/n)", report_path)).unwrap_or(false)
     {
-        return;
+        return false;
     }
 
     if parts == 0 {
         eprintln!("Cannot split report into 0 parts");
-        return;
+        return false;
     }
 
     if (report_path.is_file() && remove_file(report_path).is_err())
         || (report_path.is_dir() && remove_dir_all(report_path).is_err())
     {
         eprintln!("Failed to remove {:?}", report_path);
-        return;
+        return false;
     }
 
     match create_report::create_report(report_path, tests, parts) {
         Ok(()) => {
-            println!("Report generated");
+            println!("Report generated at {:?}", report_path);
+            true
         }
         Err(e) => {
             eprintln!("Error generating report: {}", e);
+            false
         }
     }
 }
@@ -202,7 +304,7 @@ pub fn plagiarism_check(dest_path: &Path) {
 
     match plagiarism_checker::plagiarism_check(dest_path) {
         Ok(_) => {
-            println!("Done");
+            println!("Plagiarism report generated at {:?}", dest_path);
         }
         Err(e) => {
             eprintln!("{}", e);

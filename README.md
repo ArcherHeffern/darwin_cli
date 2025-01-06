@@ -1,10 +1,59 @@
+# About 
+The head TA is the only person who needs to know how to use this program. This tool will create HTML reports containing students source code (syntax highlighted), and their test results. Distribute these reports to your TA's.
+
 # Installation
 https://crates.io/crates/darwin_cli  
-`cargo install darwin_cli`
+`cargo install darwin_cli`  
 
-# Usage
-`cargo run -- ` : Shows help  
-`cargo run -- create-project PROJECT_SKELETON MOODLE_SUBMISSIONS_ZIPFILE` : Initialize darwin  
+Ensure your install worked by running `darwin_cli`. This should show the Darwin help message.  
+
+# Quick Use
+Download _all student submissions_ zipfile from moodle
+
+Download _project sleleton_. This should have the classic maven project structure:
+
+```vermatim 
+skel
+| -- pom.xml
+| -- src
+      | -- main
+      |     | -- (main files)
+      |
+      | -- test
+            | -- (test files)
+```
+
+Run `darwin_cli grade PROJECT_SKELETON MOODLE_SUBMISSIONS_ZIPFILE`
+
+You will be prompted on which tests to run
+
+Your reports will be in the report/ directory and the plagiarism report will be at plagiarism.html
+
+View each by opening plagiarism.html or report/index.html in chrome.   
+
+Share the reports to your TA's and assign each TA one to grade. 
+
+# Advanced CLI
+
+## 1: Create Darwin Project
+
+Run `darwin_cli create-project PROJECT_SKELETON MOODLE_SUBMISSIONS_ZIPFILE` : Initialize darwin  
+
+This will create a .darwin folder containing copies of all submissions as diffs and the skeleton code. You are free to delete the source and submission folders now.  
+
+## 2: Check for plagiarism
+`darwin_cli plagiarism-check dest.html`
+
+
+## 3: Run tests
+Figure out which tests are available using `darwin_cli list-tests`  
+
+Then run a test using `darwin_cli test-all TEST [NUM_THREADS]`. I had the best results using 4 threads.
+
+## 4: Create Report
+`darwin_cli create-report DEST-PATH NUM-PARTS [TESTS]`
+
+This will create your report at dest path split into N parts, including test results from the tests listed. 
 
 # Commands
 create-project                           
@@ -16,13 +65,16 @@ test-student
 test-all                                 
 view-student-result-summary              
 view-student-result-by-class-name        
+view-student-results-verbose             
 view-all-students-results-summary        
 view-all-students-results-by-class-name  
 download-results-summary                 
-download-results-by-class-name 
-server (In development)
-create-report (In development)
-clean
+download-results-by-class-name           
+create-report                            
+plagiarism-check                         
+plagiarism-check-students                
+anonomize                                
+clean 
 
 # Stats
 ## Memory Saving (Using PA1)

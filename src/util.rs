@@ -1,9 +1,11 @@
 use std::collections::HashSet;
 use std::fs::{self, create_dir, create_dir_all, rename, OpenOptions};
 use std::io::{copy, prelude::*, BufReader, BufWriter, Error, ErrorKind, Result};
+use std::num::ParseIntError;
 use std::os::unix::fs::symlink;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
+use std::str::FromStr;
 use std::{fs::File, io, path::Path};
 
 use tempfile::NamedTempFile;
@@ -13,14 +15,25 @@ use zip::ZipArchive;
 use crate::config::{darwin_root, main_dir};
 use crate::{list_students, list_tests};
 
+pub fn prompt_digit<T: FromStr<Err = ParseIntError> + ToString>(prompt: &str) -> Result<T> {
+    let line = input(prompt)?;
+    let line = &line[..line.len()-1];
+    T::from_str(line).map_err(|e|io::Error::new(ErrorKind::Other, e.to_string()))
+}
+
 pub fn prompt_yn(prompt: &str) -> Result<bool> {
+    let line = input(prompt)?;
+    Ok(line.as_str()[..line.len() - 1].to_lowercase() == "y")
+}
+
+fn input(prompt: &str) -> Result<String> {
     let stdin = io::stdin();
     let mut stdout = io::stdout();
     print!("{} ", prompt);
     stdout.flush()?;
     let mut line = String::new();
-    let size = stdin.lock().read_line(&mut line)?;
-    Ok(line.as_str()[..size - 1].to_lowercase() == "y")
+    stdin.lock().read_line(&mut line)?;
+    return Ok(line);
 }
 
 pub fn copy_dir_all(

@@ -1,6 +1,11 @@
 __Current__
 - Create report to distribute to TA's 
 
+- How to add a student? 
+- What if student has multiple submissions? 
+- Multithread ok? 
+- Catch all run tests command for ease of use? 
+
 Parse XML file better? 
 mvn -Dtest=AllSequentialTests surefire-report:report
 Download project better. Should include test dir and src/main instead of project/main

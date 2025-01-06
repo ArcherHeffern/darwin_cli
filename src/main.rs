@@ -40,6 +40,10 @@ enum SubCommand {
         moodle_submissions_zipfile: Utf8PathBuf,
     },
     DeleteProject,
+    Auto {
+        project_skeleton: Utf8PathBuf,
+        moodle_submissions_zipfile: Utf8PathBuf,
+    },
     ListStudents,
     ListTests,
     ViewStudentSubmission {
@@ -106,7 +110,8 @@ fn main() {
     let cli = Cli::parse();
 
     let command = cli.command;
-    if let SubCommand::CreateProject { .. } = command {
+    if matches!(command, SubCommand::CreateProject { .. })
+    || matches!(command, SubCommand::Auto { .. }) {
     } else if !darwin_path.exists() {
         eprintln!("create project first");
         return;
@@ -125,6 +130,9 @@ fn main() {
         }
         SubCommand::DeleteProject => {
             fs::remove_dir_all(darwin_root()).unwrap();
+        }
+        SubCommand::Auto { project_skeleton, moodle_submissions_zipfile }=> {
+            commands::auto(project_skeleton.as_std_path(), moodle_submissions_zipfile.as_std_path(), &copy_ignore_set);
         }
         SubCommand::ListTests => {
             commands::list_tests();
