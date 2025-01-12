@@ -9,7 +9,7 @@ use serde::Serialize;
 use tempfile::tempdir;
 
 use crate::{
-    config::{darwin_root, student_diff_file, test_dir, tests_ran_file}, list_students::list_students, list_tests::list_tests, project_runner::recreate_original_project, types::{StatusMsg, TestResult, TestResultError, TestResults}, util::{
+    config::{darwin_root, student_diff_file, test_dir, tests_ran_file}, list_students::list_students, project_runner::{recreate_original_project, Project}, types::{StatusMsg, TestResult, TestResultError, TestResults}, util::{
         file_contains_line, flatten_move_recursive, list_files_recursively,
     }, view_student_results::parse_test_results
 };
@@ -82,7 +82,7 @@ struct StudentIndexTemplateContext<'a> {
     test_contexts: &'a Vec<TestPackageContext<'a>>,
 }
 
-pub fn create_report(report_path: &Path, tests: &Vec<String>, parts: u8) -> Result<()> {
+pub fn create_report(project: &Project, report_path: &Path, tests: &Vec<String>, parts: u8) -> Result<()> {
     if !darwin_root().is_dir() {
         return Err(Error::new(
             ErrorKind::NotFound,
@@ -98,7 +98,7 @@ pub fn create_report(report_path: &Path, tests: &Vec<String>, parts: u8) -> Resu
             "expected at least one test",
         ));
     }
-    let actual_tests = list_tests();
+    let actual_tests = project.list_tests();
     for test in tests {
         if !actual_tests.contains(test) {
             return Err(Error::new(
@@ -114,14 +114,14 @@ pub fn create_report(report_path: &Path, tests: &Vec<String>, parts: u8) -> Resu
             // return Err(Error::new(ErrorKind::NotFound, format!("{} is a test but wasn't run for all students", test)))
         }
     }
-    _create_report(report_path, tests, parts).inspect_err(|_| {
+    _create_report(project, report_path, tests, parts).inspect_err(|_| {
         if report_path.exists() && remove_dir_all(report_path).is_err() {
             println!("Failed to cleanup");
         }
     })
 }
 
-fn _create_report(report_root: &Path, tests: &[String], parts: u8) -> Result<()> {
+fn _create_report(project: &Project, report_root: &Path, tests: &[String], parts: u8) -> Result<()> {
     let parts = usize::from(parts);
     let students = list_students();
     if students.is_empty() {
@@ -132,7 +132,7 @@ fn _create_report(report_root: &Path, tests: &[String], parts: u8) -> Result<()>
     initialize_handlebars(&mut handlebars)?;
 
     if parts == 1 {
-        _create_report_of_certain_students(report_root, tests, &students, &handlebars)?;
+        _create_report_of_certain_students(project, report_root, tests, &students, &handlebars)?;
     } else {
         create_dir_all(report_root)?;
 
@@ -142,6 +142,7 @@ fn _create_report(report_root: &Path, tests: &[String], parts: u8) -> Result<()>
                 &students[students_per_part * i..(students_per_part * (i + 1)).min(students.len())];
             if !students_section.is_empty() {
                 _create_report_of_certain_students(
+                    project,
                     &report_root.join(i.to_string()),
                     tests,
                     students_section,
@@ -155,6 +156,7 @@ fn _create_report(report_root: &Path, tests: &[String], parts: u8) -> Result<()>
 }
 
 fn _create_report_of_certain_students(
+    project: &Project,
     report_root: &Path,
     tests: &[String],
     students: &[String],
@@ -169,7 +171,7 @@ fn _create_report_of_certain_students(
 
     create_tests_page_html(&report_root.join("tests.html"), handlebars)?;
     create_report_student_list(&report_root.join("index.html"), students, handlebars)?;
-    create_student_reports(report_root, tests, students, handlebars)?;
+    create_student_reports(project, report_root, tests, students, handlebars)?;
 
     Ok(())
 }
@@ -253,6 +255,7 @@ fn create_report_student_list(
 }
 
 fn create_student_reports(
+    project: &Project,
     report_root: &Path,
     tests: &[String],
     students: &[String],
@@ -262,6 +265,7 @@ fn create_student_reports(
     for i in 0..students.len() - 1 {
         let student = students[i].as_str();
         create_student_report(
+            project,
             report_root,
             tests,
             prev_student,
@@ -272,6 +276,7 @@ fn create_student_reports(
         prev_student = student;
     }
     create_student_report(
+        project,
         report_root,
         tests,
         prev_student,
@@ -283,6 +288,7 @@ fn create_student_reports(
 }
 
 fn create_student_report(
+    project: &Project,
     report_root: &Path,
     tests: &[String],
     prev_student: &str,
@@ -291,6 +297,7 @@ fn create_student_report(
     handlebars: &Handlebars,
 ) -> Result<()> {
     _create_student_report(
+        project,
         report_root,
         tests,
         prev_student,
@@ -301,6 +308,7 @@ fn create_student_report(
 }
 
 fn _create_student_report(
+    project: &Project,
     report_root: &Path,
     tests: &[String],
     prev_student: &str,
@@ -341,7 +349,7 @@ fn _create_student_report(
     let mut test_packages: Vec<TestPackageContext> = Vec::new();
     let test_packages_results: Vec<std::result::Result<TestResults, TestResultError>> = tests
         .iter()
-        .map(|test| parse_test_results(student, test))
+        .map(|test| parse_test_results(project, student, test))
         .collect();
     for i in 0..test_packages_results.len() {
         match &test_packages_results[i] {

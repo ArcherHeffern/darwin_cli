@@ -5,11 +5,10 @@ use std::{
 };
 
 use crate::{
-    list_students::list_students, list_tests::list_tests, types::TestResultError,
-    view_student_results::parse_test_results,
+    list_students::list_students, project_runner::Project, types::TestResultError, view_student_results::parse_test_results
 };
 
-pub fn download_results_summary(outfile: File, test: &str) -> Result<()> {
+pub fn download_results_summary(project: &Project, outfile: File, test: &str) -> Result<()> {
     let f = BufWriter::new(outfile);
     let mut wtr = csv::Writer::from_writer(f);
     let headers = vec![
@@ -24,7 +23,7 @@ pub fn download_results_summary(outfile: File, test: &str) -> Result<()> {
     for student in list_students() {
         let mut cur_row = vec![String::new(); headers.len()];
         cur_row[0] = student.clone();
-        match parse_test_results(&student, test) {
+        match parse_test_results(&project, &student, test) {
             Ok(res) => {
                 let summary = res.summary();
                 if summary.0 {
@@ -47,7 +46,7 @@ pub fn download_results_summary(outfile: File, test: &str) -> Result<()> {
     Ok(())
 }
 
-pub fn download_results_by_classname(out_file: &Path, test: &str) -> Result<()> {
+pub fn download_results_by_classname(project: &Project, out_file: &Path, test: &str) -> Result<()> {
     let out_file = OpenOptions::new()
         .write(true)
         .truncate(true)
@@ -55,7 +54,7 @@ pub fn download_results_by_classname(out_file: &Path, test: &str) -> Result<()> 
         .open(out_file)?;
     let out_file = BufWriter::new(out_file);
     let mut wtr = csv::Writer::from_writer(out_file);
-    let tests = list_tests();
+    let tests = project.list_tests();
     let mut headers = vec![String::from("Name"), String::from("Error")];
     for test in tests {
         headers.push(test);
@@ -66,7 +65,7 @@ pub fn download_results_by_classname(out_file: &Path, test: &str) -> Result<()> 
     for student in list_students() {
         let mut cur_row = vec![String::new(); headers.len()];
         cur_row[0] = student.clone();
-        match parse_test_results(&student, test) {
+        match parse_test_results(project, &student, test) {
             Ok(res) => {
                 let summary = res.summarize_by_classname();
                 match summary {

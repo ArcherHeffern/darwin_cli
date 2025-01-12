@@ -1,19 +1,16 @@
 use std::{collections::HashSet, fs::rename, io::Result};
 
 use crate::{
-    config::{compile_errors_file, student_diff_file, student_result_file},
-    list_students::list_students,
-    list_tests::list_tests,
-    util::file_replace_line,
+    config::{compile_errors_file, student_diff_file, student_result_file}, list_students::list_students, project_runner::Project, util::file_replace_line
 };
 
-pub fn anonomize() {
+pub fn anonomize(project: &Project) {
     // Currently does not do any renaming within diffs
-    _anonomize();
+    _anonomize(project);
 }
 
-fn _anonomize() {
-    let tests = list_tests();
+fn _anonomize(project: &Project) {
+    let tests = project.list_tests();
 
     for (i, student) in list_students().iter().enumerate() {
         if anonomize_student(student, i, &tests).is_err() {

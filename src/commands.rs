@@ -6,18 +6,11 @@ use std::{
 };
 
 use crate::{
-    anonomize, clean,
-    config::darwin_root,
-    create_darwin, create_report, download_results,
-    list_students::{self},
-    list_tests, plagiarism_checker,
-    run_tests::{self},
-    types::TestResultError,
-    util::{prompt_digit, prompt_yn},
-    view_student_results, view_student_submission,
+    anonomize, clean, config::darwin_root, create_darwin, create_report, download_results, list_students::{self}, plagiarism_checker, project_runner::Project, run_tests::{self}, types::TestResultError, util::{prompt_digit, prompt_yn}, view_student_results, view_student_submission
 };
 
 pub fn create_darwin(
+    project: &Project,
     project_skeleton: &Path,
     moodle_submissions_zipfile: &Path,
     copy_ignore_set: &HashSet<&str>,
@@ -45,12 +38,14 @@ pub fn create_darwin(
 }
 
 pub fn auto(
+    project: &Project,
     project_skeleton: &Path,
     moodle_submissions_zipfile: &Path,
     copy_ignore_set: &HashSet<&str>,
 ) {
     // TODO: Allow user to make mistakes when inputting using prompt_digit
     if !create_darwin(
+        project,
         project_skeleton,
         moodle_submissions_zipfile,
         copy_ignore_set,
@@ -58,7 +53,7 @@ pub fn auto(
         return;
     }
 
-    let tests: Vec<String> = crate::list_tests::list_tests().iter().cloned().collect();
+    let tests: Vec<String> = project.list_tests().iter().cloned().collect();
     let selected_tests = auto_select_tests(&tests).unwrap();
     if selected_tests.is_empty() {
         eprintln!("No tests selected. Exiting...");
@@ -77,7 +72,7 @@ pub fn auto(
 
     for selected_test in selected_tests.iter() {
         println!("Running test: {}", selected_test);
-        run_tests(selected_test, num_threads);
+        run_tests(project, selected_test, num_threads);
     }
 
     let num_sections = match prompt_digit::<usize>("How many TA's will be grading? This will determine how many sections the report will be split into.") {
@@ -99,7 +94,7 @@ pub fn auto(
         }
     };
 
-    create_report(Path::new("report"), num_sections as u8, &selected_tests);
+    create_report(project, Path::new("report"), num_sections as u8, &selected_tests);
     plagiarism_check(Path::new("plagiarism.html"));
 }
 
@@ -161,14 +156,14 @@ pub fn list_students() {
     }
 }
 
-pub fn list_tests() {
-    for test in crate::list_tests::list_tests() {
+pub fn list_tests(project: &Project) {
+    for test in project.list_tests() {
         println!("{}", test);
     }
 }
 
-pub fn run_test_for_student(student: &str, test: &str) {
-    match run_tests::run_test_for_student(student, test) {
+pub fn run_test_for_student(project: &Project, student: &str, test: &str) {
+    match run_tests::run_test_for_student(project, student, test) {
         Ok(()) => {}
         Err(e) => {
             eprintln!("{}", e);
@@ -176,8 +171,9 @@ pub fn run_test_for_student(student: &str, test: &str) {
     }
 }
 
-pub fn run_tests(test: &str, num_threads: usize) {
+pub fn run_tests(project: &Project, test: &str, num_threads: usize) {
     match run_tests::concurrent_run_tests(
+        project,
         test,
         num_threads,
         |s| println!("Processing: {}", s),
@@ -197,8 +193,8 @@ pub enum ViewMode {
     Everything,
 }
 
-pub fn view_student_result(student: &str, test: &str, view_mode: &ViewMode) {
-    match view_student_results::parse_test_results(student, test) {
+pub fn view_student_result(project: &Project, student: &str, test: &str, view_mode: &ViewMode) {
+    match view_student_results::parse_test_results(project, student, test) {
         Ok(result) => match view_mode {
             ViewMode::Summarize => {
                 println!("{}", result.summarize());
@@ -221,18 +217,18 @@ pub fn view_student_result(student: &str, test: &str, view_mode: &ViewMode) {
     }
 }
 
-pub fn view_all_results(test: &str, summarize: &ViewMode) {
-    if !list_tests::list_tests().contains(test) {
+pub fn view_all_results(project: &Project, test: &str, summarize: &ViewMode) {
+    if !project.list_tests().contains(test) {
         eprintln!("Test '{}' not recognized", test);
         return;
     }
     list_students::list_students().iter().for_each(|student| {
         println!("Processing '{}'", student);
-        view_student_result(student, test, summarize);
+        view_student_result(project, student, test, summarize);
     });
 }
 
-pub fn download_results_summary(test: &str, outfile: &str) {
+pub fn download_results_summary(project: &Project, test: &str, outfile: &str) {
     let out_file_path = Path::new(outfile);
     if out_file_path.exists()
         && !prompt_yn(&format!("{} Exists. Continue? (y/n)", outfile)).unwrap_or(false)
@@ -245,16 +241,16 @@ pub fn download_results_summary(test: &str, outfile: &str) {
         .create(true)
         .open(out_file_path)
         .unwrap();
-    download_results::download_results_summary(out_file, test).unwrap();
+    download_results::download_results_summary(project, out_file, test).unwrap();
 }
-pub fn download_results_by_classname(test: &str, outfile: &str) {
+pub fn download_results_by_classname(project: &Project, test: &str, outfile: &str) {
     let out_file = Path::new(outfile);
     if out_file.exists()
         && !prompt_yn(&format!("{} Exists. Continue? (y/n)", outfile)).unwrap_or(false)
     {
         return;
     }
-    download_results::download_results_by_classname(out_file, test).unwrap();
+    download_results::download_results_by_classname(project, out_file, test).unwrap();
 }
 
 pub fn view_student_submission(student: &str) {
@@ -277,7 +273,7 @@ pub fn view_student_submission(student: &str) {
     };
 }
 
-pub fn create_report(report_path: &Path, parts: u8, tests: &Vec<String>) -> bool {
+pub fn create_report(project: &Project, report_path: &Path, parts: u8, tests: &Vec<String>) -> bool {
     if report_path.exists()
         && !prompt_yn(&format!("{:?} Exists. Continue? (y/n)", report_path)).unwrap_or(false)
     {
@@ -296,7 +292,7 @@ pub fn create_report(report_path: &Path, parts: u8, tests: &Vec<String>) -> bool
         return false;
     }
 
-    match create_report::create_report(report_path, tests, parts) {
+    match create_report::create_report(project, report_path, tests, parts) {
         Ok(()) => {
             println!("Report generated at {:?}", report_path);
             true
@@ -352,7 +348,7 @@ pub fn clean() {
     }
 }
 
-pub fn anonomize() {
-    anonomize::anonomize();
+pub fn anonomize(project: &Project) {
+    anonomize::anonomize(project);
     println!("Done");
 }

@@ -10,17 +10,18 @@ use crate::{
     config::{
         compile_errors_file, darwin_root, diff_dir, student_diff_file, student_project_file,
         student_result_file, tests_ran_file,
-    }, project_runner::maven_project, util::{file_append_line, is_student, is_test}
+    }, project_runner::{maven_project, Project}, util::{file_append_line, is_student, is_test}
 };
 
 pub fn concurrent_run_tests(
+    project: &Project,
     test: &str,
     num_threads: usize,
     on_thread_start: fn(&str),
     on_thread_err: fn(&str, Error),
     on_thread_end: fn(&str),
 ) -> Result<()> {
-    if !is_test(test) {
+    if !is_test(project, test) {
         return Err(io::Error::new(
             ErrorKind::NotFound,
             format!("Test {} not recognized", test),
@@ -28,6 +29,7 @@ pub fn concurrent_run_tests(
     }
 
     _concurrent_run_tests(
+        project,
         test,
         num_threads,
         on_thread_start,
@@ -37,6 +39,7 @@ pub fn concurrent_run_tests(
 }
 
 fn _concurrent_run_tests(
+    project: &Project,
     test: &str,
     num_threads: usize,
     on_thread_start: fn(&str),
@@ -49,10 +52,11 @@ fn _concurrent_run_tests(
         let diff_path = diff_path.unwrap();
         let student = diff_path.file_name().into_string().expect("?");
         let test_clone = test.to_string();
+        let project_copy = project.clone();
         threadpool.execute(move || {
             on_thread_start(&student);
             // let darwin_path_clone = darwin_path.to_pat
-            match run_test_for_student(&student, &test_clone) {
+            match run_test_for_student(&project_copy, &student, &test_clone) {
                 Ok(()) => {
                     on_thread_end(&student);
                 }
@@ -66,7 +70,7 @@ fn _concurrent_run_tests(
     file_append_line(&tests_ran_file(), test)
 }
 
-pub fn run_test_for_student(student: &str, test: &str) -> Result<()> {
+pub fn run_test_for_student(project: &Project, student: &str, test: &str) -> Result<()> {
     // Validate Inputs
     if !darwin_root().is_dir() {
         return Err(Error::new(
@@ -74,7 +78,7 @@ pub fn run_test_for_student(student: &str, test: &str) -> Result<()> {
             "darwin project not initialized in this directory",
         ));
     }
-    if !is_test(test) {
+    if !is_test(project, test) {
         return Err(Error::new(
             ErrorKind::InvalidInput,
             format!("Test '{}' was not found", test),
@@ -102,6 +106,7 @@ pub fn run_test_for_student(student: &str, test: &str) -> Result<()> {
     }
 
     _run_test_for_student(
+        project,
         student_project_path.as_path(),
         student,
         test,
@@ -110,73 +115,22 @@ pub fn run_test_for_student(student: &str, test: &str) -> Result<()> {
 }
 
 fn _run_test_for_student(
+    project: &Project,
     project_path: &Path,
     student: &str,
     test: &str,
     dest_file: &Path,
 ) -> Result<()> {
     let diff_path = student_diff_file(student);
-    maven_project().recreate_normalized_project(project_path, &diff_path)?;
-    if let Err(e) = compile(project_path) {
-        let compile_error_path = compile_errors_file();
-        let mut compile_error_file = OpenOptions::new()
-            .read(true)
-            .append(true)
-            .open(compile_error_path)
-            .unwrap();
-
-        compile_error_file.write_all(format!("{}\n", student).as_bytes())?;
+    project.recreate_normalized_project(project_path, &diff_path)?;
+    if let Err(e) = project.compile(project_path) {
+        file_append_line(&compile_errors_file(), &format!("{}:{}", student, e.to_string()))?;
         remove_dir_all(project_path)?;
         return Err(e);
     }
-    run_test(project_path, test)?;
-    relocate_test_results(project_path, test, dest_file)?;
+    project.run_test(project_path, test)?;
+    project.relocate_test_results(project_path, test, dest_file)?;
     remove_dir_all(project_path)?;
 
-    Ok(())
-}
-
-fn compile(project_path: &Path) -> Result<()> {
-    // mvn compile
-
-    let mut compile_command = Command::new("mvn")
-        .current_dir(project_path)
-        .arg("test-compile")
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn()?;
-
-    let status = compile_command.wait()?;
-    if !status.success() {
-        return Err(Error::new(ErrorKind::Other, "'mvn test-compile' failed"));
-    }
-
-    Ok(())
-}
-
-fn run_test(project_path: &Path, test: &str) -> Result<()> {
-    // mvn -Dtest={test_str} surefire:test
-
-    let mut run_tests_command = Command::new("mvn")
-        .current_dir(project_path)
-        .arg(format!("-Dtest={}", test))
-        .arg("surefire:test")
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn()?;
-
-    run_tests_command.wait()?;
-    Ok(())
-}
-
-fn relocate_test_results(project_path: &Path, test: &str, dest_file: &Path) -> Result<()> {
-    let results_filename_from = format!("TEST-{}.xml", test);
-    let results_file_from = project_path
-        .join("target")
-        .join("surefire-reports")
-        .join(results_filename_from);
-    rename(results_file_from, dest_file).unwrap();
     Ok(())
 }

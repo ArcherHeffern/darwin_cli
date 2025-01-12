@@ -11,7 +11,8 @@ use tempfile::NamedTempFile;
 use zip::read::ZipFile;
 use zip::ZipArchive;
 
-use crate::{list_students, list_tests};
+use crate::list_students;
+use crate::project_runner::Project;
 
 pub fn prompt_digit<T: FromStr<Err = ParseIntError> + ToString>(prompt: &str) -> Result<T> {
     let line = input(prompt)?;
@@ -231,9 +232,9 @@ fn _create_diff(original: &Path, deviant: &Path, dest_path: &Path) -> Result<()>
     Ok(())
 }
 
-pub fn is_test(test: &str) -> bool {
+pub fn is_test(project: &Project, test: &str) -> bool {
     // validate list of tests is comma separated and all exist
-    list_tests::list_tests().contains(test)
+    project.list_tests().contains(test)
 }
 
 pub fn is_student(student: &str) -> bool {
@@ -403,7 +404,7 @@ pub fn buffer_flatmap<R: std::io::Read, W: std::io::Write>(
 
 #[cfg(test)]
 mod tests {
-    use std::{fs::File, io::Read, path::{Path, PathBuf}};
+    use std::{collections::HashMap, fs::File, io::Read, path::{Path, PathBuf}};
 
     use zip::ZipArchive;
 
@@ -463,9 +464,11 @@ mod tests {
         let zip_path = Path::new("./testing/test.zip");
         let zip_file = File::open(zip_path).unwrap();
         let mut zip = ZipArchive::new(zip_file).unwrap();
-        let project = maven_project();
+        let mut submission_zipfile_mapping = HashMap::new();
+        submission_zipfile_mapping.insert(PathBuf::from("pom.xml"), PathBuf::from("pom.xml"));
+        submission_zipfile_mapping.insert(PathBuf::from("src/main/"), PathBuf::from("src/main/"));
 
-        let root = project_root_in_zip(&mut zip, &project.submission_zipfile_mapping.keys().collect()).unwrap();
+        let root = project_root_in_zip(&mut zip, &submission_zipfile_mapping.keys().collect()).unwrap();
         assert!(root == PathBuf::from("TestPA1")); 
     }
 }

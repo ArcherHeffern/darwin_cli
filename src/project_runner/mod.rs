@@ -8,6 +8,8 @@ use crate::{
     config::{darwin_root, skel_dir, tmp_dir}, move_to_tmp_location_and_back::MoveToTempLocationAndBack, util::{self, create_diff, extract_zipfile, patch, project_root_in_zip}
 };
 
+mod maven;
+
 // Report Include Map
 // Skel Mapping
 // Zipfile Mapping
@@ -17,11 +19,16 @@ use crate::{
 
 // Remove copy_ignore_set in place of ignore
 
+#[derive(Clone)]
 pub struct Project {
-    pub skel_mapping: HashMap<PathBuf, PathBuf>,
-    pub submission_zipfile_mapping: HashMap<PathBuf, PathBuf>,
-    pub ignore: HashSet<String>,
-    pub diff_exclude: HashSet<PathBuf>,
+    skel_mapping: HashMap<PathBuf, PathBuf>,
+    submission_zipfile_mapping: HashMap<PathBuf, PathBuf>,
+    ignore: HashSet<String>,
+    diff_exclude: HashSet<PathBuf>,
+    compile_fn: fn(&Project, &Path) -> Result<()>,
+    list_tests_fn: fn(&Project) -> HashSet<String>,
+    run_test_fn: fn(&Project, &Path, &str) -> Result<()>,
+    relocate_test_results_fn: fn(&Project, &Path, &str, &Path) -> Result<()>, // project, project_path, test, dest_file
     // Result target: Should be a !format of the test name and student name
 }
 
@@ -52,7 +59,11 @@ pub fn maven_project() -> Project {
         skel_mapping,
         submission_zipfile_mapping,
         ignore,
-        diff_exclude
+        diff_exclude,
+        compile_fn: maven::compile,
+        list_tests_fn: maven::list_tests,
+        run_test_fn: maven::run_test,
+        relocate_test_results_fn: maven::relocate_test_results,
     }
 }
 
@@ -160,7 +171,7 @@ impl Project {
 
     }
 
-    /// If in diff_exclude temporarily move out skel, patch, then move back, and symlink all entrys of diff_exclude in
+    /// If in diff_exclude, temporarily move out skel, patch, then move back, and symlink all entrys of diff_exclude in
     /// Invariants:
     /// - darwin_path is an existing .darwin project root directory
     /// - project_path does not exist
@@ -194,6 +205,22 @@ impl Project {
         }
 
         Ok(())
+    }
+
+    pub fn compile(&self, project_path: &Path) -> Result<()> {
+        (self.compile_fn)(self, project_path)
+    }
+
+    pub fn list_tests(&self) -> HashSet<String> {
+        (self.list_tests_fn)(self)
+    }
+
+    pub fn run_test(&self, project_path: &Path, test: &str) -> Result<()> {
+        (self.run_test_fn)(self, project_path, test)
+    }
+
+    pub fn relocate_test_results(&self, project_path: &Path, test: &str, dest_file: &Path) -> Result<()> {
+        (self.relocate_test_results_fn)(self, project_path, test, dest_file)
     }
 }
 

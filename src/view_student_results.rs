@@ -9,14 +9,10 @@ use std::{
 use xml::{attribute::OwnedAttribute, name::OwnedName, reader::XmlEvent, EventReader};
 
 use crate::{
-    config::{compile_errors_file, student_result_file},
-    list_students::list_students,
-    list_tests::list_tests,
-    types::{StatusMsg, TestResult, TestResultError, TestResults, TestState},
-    util::file_contains_line,
+    config::{compile_errors_file, student_result_file}, list_students::list_students, project_runner::Project, types::{StatusMsg, TestResult, TestResultError, TestResults, TestState}, util::file_contains_line
 };
 
-pub fn parse_test_results(student: &str, test: &str) -> Result<TestResults, TestResultError> {
+pub fn parse_test_results(project: &Project, student: &str, test: &str) -> Result<TestResults, TestResultError> {
     if !list_students().iter().any(|s| s == student) {
         return Err(TestResultError::IOError(io::Error::new(
             io::ErrorKind::NotFound,
@@ -24,7 +20,7 @@ pub fn parse_test_results(student: &str, test: &str) -> Result<TestResults, Test
         )));
     }
 
-    if !list_tests().contains(test) {
+    if !project.list_tests().contains(test) {
         return Err(TestResultError::IOError(io::Error::new(
             io::ErrorKind::NotFound,
             format!("Test {} not recognized", test),
