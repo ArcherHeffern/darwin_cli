@@ -1,18 +1,16 @@
-use std::collections::HashSet;
-use std::fs::{self, create_dir, create_dir_all, rename, OpenOptions};
+use std::collections::{HashMap, HashSet};
+use std::fs::{self, create_dir_all, rename, OpenOptions};
 use std::io::{copy, prelude::*, BufReader, BufWriter, Error, ErrorKind, Result};
 use std::num::ParseIntError;
-use std::os::unix::fs::symlink;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::str::FromStr;
 use std::{fs::File, io, path::Path};
 
 use tempfile::NamedTempFile;
-use zip::result::ZipError;
+use zip::read::ZipFile;
 use zip::ZipArchive;
 
-use crate::config::{darwin_root, main_dir};
 use crate::{list_students, list_tests};
 
 pub fn prompt_digit<T: FromStr<Err = ParseIntError> + ToString>(prompt: &str) -> Result<T> {
@@ -36,18 +34,32 @@ fn input(prompt: &str) -> Result<String> {
     Ok(line)
 }
 
+/// Recursively copies all files from src into dest, ignoring files contained in `ignore`
+/// 
+/// create_dir_all's dst
+/// 
+/// # Errors
+/// 
+/// Dest MUST not exist
 pub fn copy_dir_all(
+    src: &Path,
+    dst: &Path,
+    ignore: Option<&HashSet<&str>>,
+) -> io::Result<()> {
+    _copy_dir_all(src, dst, ignore).map_err(|e|Error::new(ErrorKind::Other, format!("Failed to copy {:?} to {:?}: {}", src, dst, e)))
+}
+pub fn _copy_dir_all(
     src: impl AsRef<Path>,
     dst: impl AsRef<Path>,
-    ignore: &HashSet<&str>,
+    ignore: Option<&HashSet<&str>>,
 ) -> io::Result<()> {
     fs::create_dir_all(&dst)?;
     for entry in fs::read_dir(src)? {
         let entry = entry?;
         let ty = entry.file_type()?;
         if ty.is_dir() {
-            copy_dir_all(entry.path(), dst.as_ref().join(entry.file_name()), ignore)?;
-        } else if !ignore.contains(entry.file_name().to_str().unwrap()) {
+            _copy_dir_all(entry.path(), dst.as_ref().join(entry.file_name()), ignore)?;
+        } else if ignore.map_or(true, |i|!i.contains(entry.file_name().to_str().unwrap())) {
             fs::copy(entry.path(), dst.as_ref().join(entry.file_name()))?;
         }
     }
@@ -125,59 +137,61 @@ pub fn list_files_recursively(dir: &Path) -> Vec<PathBuf> {
     files
 }
 
-pub fn extract_directory_from_zip(
-    archive: &mut ZipArchive<File>,
-    output_dir: &str,
-    dir_name: &str,
-    ignore_substrings: &HashSet<&str>,
-) -> zip::result::ZipResult<()> {
-    // Places all contents of dir_name, not including the directory name into output_dir
-    for i in 0..archive.len() {
-        let mut file = archive.by_index(i)?;
-        let file_name = file.name();
+/// Given main path /etc/conf/hold/home, and subpath, /conf/hold, returns parent of subpath, /etc/
+pub fn subpath_parent(path: &Path, sub_path: &Path) -> Option<PathBuf> {
+    let path_parts: Vec<String> = path.iter().map(|os_str|os_str.to_string_lossy().to_string()).collect();
+    let sub_path_parts: Vec<String> = sub_path.iter().map(|os_str|os_str.to_string_lossy().to_string()).collect();
+    let index = find_subarray_index(&path_parts, &sub_path_parts)?;
+    let out = (0..index).fold(PathBuf::new(), |buf, index|buf.join(path_parts.get(index).unwrap()));
+    Some(out)
+}
 
-        // Check if the file is in the specified directory
-        let index_of_dir_name = file_name.find(dir_name);
-        if index_of_dir_name.is_none()
-            || ignore_substrings
-                .iter()
-                .any(|ignore| file_name.contains(ignore))
-        {
-            continue;
+pub fn find_subarray_index<T:PartialEq>(haystack: &[T], needle: &[T]) -> std::option::Option<usize> {
+    if needle.len() > haystack.len() {
+        return None;
+    }
+    for i in 0..haystack.len()-needle.len()+1 {
+        if haystack[i..i+needle.len()] == needle[..] {
+            return Some(i);
         }
+    }
+    None
+}
 
-        let out_path_s = &file_name[index_of_dir_name.unwrap() + dir_name.len() + 1..];
-        let out_path = Path::new(output_dir).join(out_path_s);
-
-        if file.is_dir() {
-            // Create the directory
-            if let Err(e) = std::fs::create_dir_all(&out_path) {
-                eprintln!("Error creating directory and all parent directories of {:?} while extracting directory from zipfile: {}", out_path, e);
-                eprintln!("{}", out_path_s);
-                return Err(ZipError::from(e));
-            }
-        } else {
-            // Write the file
-            if let Some(parent) = out_path.parent() {
-                if let Err(e) = std::fs::create_dir_all(parent) {
-                    // Create parent directories if needed
-                    eprintln!("Error creating parent directories of {:?}: {}", out_path, e);
+/// Finds the root that matches the structure contained in project_structure
+/// Given a ziparchive, find the directory that directly contains all of project_structure
+pub fn project_root_in_zip(zip: &mut ZipArchive<File>, project_structure: &HashSet<&PathBuf>) -> Result<PathBuf> {
+    let mut project_structure_mappings: HashMap<PathBuf, HashSet<&PathBuf>> = HashMap::new();
+    for i in 0..zip.len() {
+        if let Some(file_name) = zip.by_index(i)?.enclosed_name() {
+            for part in project_structure.iter().cloned() {
+                if let Some(parent) = subpath_parent(&file_name, part) {
+                    project_structure_mappings.entry(parent).or_insert_with(HashSet::new).insert(part);
                 }
-            }
-            match File::create(&out_path) {
-                Err(e) => eprintln!("Error creating file {:?}: {}", out_path, e),
-                Ok(mut outfile) => match io::copy(&mut file, &mut outfile) {
-                    Ok(_) => (),
-                    Err(e) => eprintln!("Error copying {} to {:?}: {}", file.name(), outfile, e),
-                },
             }
         }
     }
-    Ok(())
+    let roots: Vec<&PathBuf> = project_structure_mappings.iter().filter(|(_, v)|v.len()==project_structure.len()).map(|(k,_)|k).collect();
+
+    match roots.len() {
+        0 => {
+            Err(Error::new(ErrorKind::Other, "No project root found in zipfile matching project_structure"))
+        }
+        1 => {
+            Ok(roots[0].clone())
+        }
+        _ => {
+            Err(Error::new(ErrorKind::Other, "Too many project roots found in zipfile matching project_structure"))
+        }
+    }
 }
 
+/// Truncates dest_path if it exists. Creates dest_path if not.
+/// 
+/// # Errors
+/// * original does not exist
+/// * deviant does not exist
 pub fn create_diff(original: &Path, deviant: &Path, dest_path: &Path) -> Result<()> {
-    // Truncates dest_path if it exists
 
     if !original.exists() {
         return Err(Error::new(
@@ -226,50 +240,12 @@ pub fn is_student(student: &str) -> bool {
     list_students::list_students().iter().any(|s| s == student)
 }
 
-pub fn create_student_project(project_path: &Path, diff_path: &Path) -> Result<()> {
-    // Invariants:
-    // - darwin_path is an existing .darwin project root directory
-    // - project_path does not exist
-    assert!(darwin_root().is_dir());
-    assert!(!project_path.exists());
-
-    create_dir_all(project_path)?;
-    create_dir(project_path.join("src"))?;
-    symlink(
-        darwin_root().join("test").canonicalize()?,
-        project_path.join("src").join("test"),
-    )?;
-    create_dir_all(project_path.join("src").join("main"))?;
-    recreate_student_main(
-        diff_path,
-        &project_path.join("src").join("main"),
-        project_path,
-    )?;
-
-    Ok(())
-}
-
-pub fn recreate_student_main(
-    diff_path: &Path,
-    main_dest_dir: &Path,
-    pom_dest_dir: &Path,
-) -> Result<()> {
-    // Dest dir must be empty
-    // pom.xml will also end up in this directory
-    if !main_dest_dir.is_dir() {
-        return Err(Error::new(ErrorKind::Other, "Expected dir"));
-    }
-
-    patch(&main_dir(), diff_path, main_dest_dir)?;
-    fs::rename(main_dest_dir.join("pom.xml"), pom_dest_dir.join("pom.xml"))?;
-    Ok(())
-}
 
 pub fn patch(patch_path: &Path, diff_path: &Path, dest_path: &Path) -> Result<()> {
     // patch_path: Directory containing original files
     // diff_path: Diff to be patched into patch_path
     // Destination path
-    copy_dir_all(patch_path, dest_path, &HashSet::new()).unwrap();
+    copy_dir_all(patch_path, dest_path, Some(&HashSet::new())).unwrap();
 
     let mut output = Command::new("patch")
         .arg("-d")
@@ -300,6 +276,51 @@ pub fn patch(patch_path: &Path, diff_path: &Path, dest_path: &Path) -> Result<()
             "Failed to wait for patch process",
         ));
     }
+    Ok(())
+}
+
+
+/// Extracts file from ZipArchive
+/// 
+/// # Errors
+/// 
+/// * file pointed to by file_name does not exist
+/// * dest is not writable 
+/// * dest does not exist
+pub fn extract_file(
+    zip: &mut ZipArchive<File>,
+    file_name: &str,
+    dest: &mut File,
+) -> Result<()> {
+    let mut file_in_zip = zip.by_name(file_name)?;
+    let mut writer = BufWriter::new(dest);
+    io::copy(&mut file_in_zip, &mut writer)?;
+    writer.flush()?; // Ensure all data is written to the underlying file
+    Ok(())
+}
+
+/// Extracts file or directory from zipfile
+pub fn extract_zipfile(zipfile: ZipFile, dest: &Path) -> Result<()> {
+    if zipfile.is_dir() {
+        create_dir_all(dest)?;
+        return Ok(());
+    }
+    if let Some(parent) = dest.parent() {
+        create_dir_all(parent)?;
+    }
+    let dest_file = File::create(&dest)
+        .map_err(|e| Error::new(ErrorKind::Other, format!("Creating Dest file: {}", e)))?;
+    let mut reader = BufReader::new(zipfile);
+    let mut writer = BufWriter::new(dest_file);
+
+    // Copy the contents of the zip entry to the new file
+    copy(&mut reader, &mut writer)
+        .map_err(|e| Error::new(ErrorKind::Other, format!("Copying zip entry to dest: {}", e)))?;
+
+    // Flush the writer to ensure all data is written
+    writer
+        .flush()
+        .map_err(|e| Error::new(ErrorKind::Other, format!("Flushing buffer: {}", e)))?;
     Ok(())
 }
 
@@ -377,11 +398,13 @@ pub fn buffer_flatmap<R: std::io::Read, W: std::io::Write>(
 
 #[cfg(test)]
 mod tests {
-    use std::{fs::File, io::Read};
+    use std::{fs::File, io::Read, path::{Path, PathBuf}};
 
-    use crate::util::buffer_flatmap;
+    use zip::ZipArchive;
 
-    use super::{file_replace_line, BufReader, BufWriter, Write};
+    use crate::{project_runner::MavenProject, util::buffer_flatmap};
+
+    use super::{file_replace_line, project_root_in_zip, subpath_parent, BufReader, BufWriter, Write};
 
     #[test]
     fn buffer_filter_test() {
@@ -418,5 +441,26 @@ mod tests {
         let expected_contents = "c\nb\nc\nc\nc\n\nbb";
 
         assert_eq!(actual_contents, expected_contents);
+    }
+
+    #[test]
+    fn test_subpath_parent() {
+        let path = Path::new("etc").join("home").join("turtle").join("frog");
+        assert_eq!(subpath_parent(&path, Path::new("etc")), Some(PathBuf::from("")));
+        assert_eq!(subpath_parent(&path, Path::new("home")), Some(PathBuf::from("etc")));
+        assert_eq!(subpath_parent(&path, Path::new("turtle")), Some(PathBuf::from("etc/home")));
+        assert_eq!(subpath_parent(&path, Path::new("frog")), Some(PathBuf::from("etc/home/turtle")));
+        assert_eq!(subpath_parent(&path, Path::new("not_exists")), None);
+    }
+
+    #[test]
+    fn test_project_root_in_zip() {
+        let zip_path = Path::new("./testing/test.zip");
+        let zip_file = File::open(zip_path).unwrap();
+        let mut zip = ZipArchive::new(zip_file).unwrap();
+        let mp = MavenProject::new();
+
+        let root = project_root_in_zip(&mut zip, &mp.submission_zipfile_mapping.keys().collect()).unwrap();
+        assert!(root == PathBuf::from("TestPA1")); 
     }
 }

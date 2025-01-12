@@ -9,14 +9,9 @@ use serde::Serialize;
 use tempfile::tempdir;
 
 use crate::{
-    config::{darwin_root, student_diff_file, test_dir, tests_ran_file},
-    list_students::list_students,
-    list_tests::list_tests,
-    types::{StatusMsg, TestResult, TestResultError, TestResults},
-    util::{
-        file_contains_line, flatten_move_recursive, list_files_recursively, recreate_student_main,
-    },
-    view_student_results::parse_test_results,
+    config::{darwin_root, student_diff_file, test_dir, tests_ran_file}, list_students::list_students, list_tests::list_tests, project_runner::recreate_original_project, types::{StatusMsg, TestResult, TestResultError, TestResults}, util::{
+        file_contains_line, flatten_move_recursive, list_files_recursively,
+    }, view_student_results::parse_test_results
 };
 
 #[derive(Serialize)]
@@ -316,7 +311,7 @@ fn _create_student_report(
     let diff_path = student_diff_file(student);
     let student_dir = &report_root.join("students").join(student);
     let tmpdir = tempdir()?;
-    recreate_student_main(&diff_path, tmpdir.path(), tmpdir.path())?;
+    recreate_original_project(&diff_path, tmpdir.path())?;
     let file_paths = list_files_recursively(tmpdir.path());
 
     let mut files = Vec::new();
