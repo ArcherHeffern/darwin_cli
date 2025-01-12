@@ -78,3 +78,9 @@ pub fn relocate_test_results(_: &Project, project_path: &Path, test: &str, dest_
     rename(&results_file_from, dest_file).map_err(|e|Error::new(ErrorKind::Other, format!("Failed to rename {:?} to {:?}: {}", results_file_from, dest_file, e)))?;
     Ok(())
 }
+
+// Parse test results
+
+// Create universal test result format for report
+
+// Display test results in report

@@ -1,8 +1,7 @@
 use std::{
-    fs::{remove_dir_all, remove_file, rename, OpenOptions},
-    io::{self, prelude::*, Error, ErrorKind, Result},
+    fs::{remove_dir_all, remove_file},
+    io::{self, Error, ErrorKind, Result},
     path::Path,
-    process::{Command, Stdio},
 };
 use threadpool::ThreadPool;
 
@@ -10,7 +9,7 @@ use crate::{
     config::{
         compile_errors_file, darwin_root, diff_dir, student_diff_file, student_project_file,
         student_result_file, tests_ran_file,
-    }, project_runner::{maven_project, Project}, util::{file_append_line, is_student, is_test}
+    }, project_runner::Project, util::{file_append_line, is_student, is_test}
 };
 
 pub fn concurrent_run_tests(

@@ -1,5 +1,5 @@
 use crate::config::{
-    compile_errors_file, darwin_root, diff_dir, extraction_errors_file, main_dir, projects_dir, results_dir, student_diff_file, test_dir, tests_ran_file
+    compile_errors_file, darwin_root, diff_dir, extraction_errors_file, projects_dir, results_dir, student_diff_file, tests_ran_file
 };
 use crate::util::{extract_file, file_append_line};
 use std::fs::{remove_dir_all, File};
@@ -7,9 +7,10 @@ use std::io::{Error, ErrorKind, Result};
 use std::{collections::HashSet, fs, path::Path};
 use tempfile::{tempdir, tempfile};
 use zip::ZipArchive;
-use crate::project_runner::{self, maven_project};
+use crate::project_runner::Project;
 
 pub fn create_darwin(
+    project: &Project,
     project_skeleton: &Path,
     moodle_submissions_zipfile: &Path,
     copy_ignore_set: &HashSet<&str>,
@@ -43,6 +44,7 @@ pub fn create_darwin(
     }
 
     let status = _create_darwin(
+        project,
         project_skeleton,
         moodle_submissions_zipfile,
         copy_ignore_set,
@@ -56,6 +58,7 @@ pub fn create_darwin(
 }
 
 fn _create_darwin(
+    project: &Project,
     skeleton_path: &Path,
     submission_zipfile_path: &Path,
     copy_ignore_set: &HashSet<&str>,
@@ -68,9 +71,9 @@ fn _create_darwin(
     File::create(extraction_errors_file())?;
     File::create(compile_errors_file())?;
 
-    maven_project().init_skeleton(skeleton_path, Some(copy_ignore_set))?;
+    project.init_skeleton(skeleton_path, Some(copy_ignore_set))?;
 
-    submissions_to_diffs(submission_zipfile_path, copy_ignore_set, |s, e| {
+    submissions_to_diffs(project, submission_zipfile_path, copy_ignore_set, |s, e| {
         file_append_line(&extraction_errors_file(), &format!("{}: {}", s, e.to_string())).expect("We should be able to write to extraction errors file");
         eprintln!("Error extracting {}'s submission: {}", s, e)
     })?;
@@ -79,6 +82,7 @@ fn _create_darwin(
 }
 
 fn submissions_to_diffs(
+    project: &Project,
     submission_zipfile_path: &Path,
     copy_ignore_set: &HashSet<&str>,
     on_submission_extraction_error: fn(&str, &Error), // Student name
@@ -106,7 +110,6 @@ fn submissions_to_diffs(
             ));
         }
 
-        let project = maven_project();
         let mut student_project_zip = ZipArchive::new(student_submission_file)?;
         let normalized_project = tempdir()?;
         if let Err(e) = project.zip_submission_to_normalized_form(&mut student_project_zip, normalized_project.path(), Some(copy_ignore_set)) {

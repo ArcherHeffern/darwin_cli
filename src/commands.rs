@@ -27,6 +27,7 @@ pub fn create_darwin(
         }
     }
     if let Err(e) = create_darwin::create_darwin(
+        project,
         project_skeleton,
         moodle_submissions_zipfile,
         copy_ignore_set,

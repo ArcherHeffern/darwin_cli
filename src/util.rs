@@ -408,7 +408,7 @@ mod tests {
 
     use zip::ZipArchive;
 
-    use crate::{project_runner::maven_project, util::buffer_flatmap};
+    use crate::util::buffer_flatmap;
 
     use super::{file_replace_line, project_root_in_zip, subpath_parent, BufReader, BufWriter, Write};
 

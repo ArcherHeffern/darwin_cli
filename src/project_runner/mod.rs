@@ -69,9 +69,8 @@ pub fn maven_project() -> Project {
 
 
 impl Project {
-
     pub fn init_skeleton(
-        self,
+        &self,
         skeleton_path: &Path,
         copy_ignore_set: Option<&HashSet<&str>>,
     ) -> Result<()> {
