@@ -35,6 +35,10 @@ pub fn darwin_root() -> PathBuf {
             results_dir().join(format!("{}_{}", student, test))
         }
 
+    pub fn extraction_errors_file() -> PathBuf {
+        darwin_root().join("extraction_errors")
+    }
+
     pub fn compile_errors_file() -> PathBuf {
         darwin_root().join("compile_errors")
     }

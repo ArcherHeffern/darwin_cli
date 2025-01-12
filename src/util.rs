@@ -181,7 +181,7 @@ pub fn project_root_in_zip(zip: &mut ZipArchive<File>, project_structure: &HashS
             Ok(roots[0].clone())
         }
         _ => {
-            Err(Error::new(ErrorKind::Other, "Too many project roots found in zipfile matching project_structure"))
+            Err(Error::new(ErrorKind::Other, format!("Too many project roots found in zipfile matching project_structure: {:?}", roots)))
         }
     }
 }
@@ -241,18 +241,23 @@ pub fn is_student(student: &str) -> bool {
 }
 
 
-pub fn patch(patch_path: &Path, diff_path: &Path, dest_path: &Path) -> Result<()> {
+pub fn patch(patch_path: &Path, diff_path: &Path, dest_path: &Path, silent: bool) -> Result<()> {
     // patch_path: Directory containing original files
     // diff_path: Diff to be patched into patch_path
     // Destination path
     copy_dir_all(patch_path, dest_path, Some(&HashSet::new())).unwrap();
+
+    let stdout = match silent {
+        true => Stdio::null(),
+        false => Stdio::inherit()
+    };
 
     let mut output = Command::new("patch")
         .arg("-d")
         .arg(dest_path)
         .arg("-p2")
         .stdin(Stdio::piped())
-        .stdout(Stdio::null())
+        .stdout(stdout)
         .spawn()?;
 
     match output.stdin.take() {
@@ -402,7 +407,7 @@ mod tests {
 
     use zip::ZipArchive;
 
-    use crate::{project_runner::MavenProject, util::buffer_flatmap};
+    use crate::{project_runner::maven_project, util::buffer_flatmap};
 
     use super::{file_replace_line, project_root_in_zip, subpath_parent, BufReader, BufWriter, Write};
 
@@ -458,9 +463,9 @@ mod tests {
         let zip_path = Path::new("./testing/test.zip");
         let zip_file = File::open(zip_path).unwrap();
         let mut zip = ZipArchive::new(zip_file).unwrap();
-        let mp = MavenProject::new();
+        let project = maven_project();
 
-        let root = project_root_in_zip(&mut zip, &mp.submission_zipfile_mapping.keys().collect()).unwrap();
+        let root = project_root_in_zip(&mut zip, &project.submission_zipfile_mapping.keys().collect()).unwrap();
         assert!(root == PathBuf::from("TestPA1")); 
     }
 }

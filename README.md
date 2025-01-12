@@ -150,7 +150,10 @@ report
 |  
 | -- results/  
 |     | -- ${student_name}_{test name}  
-|     | -- compile_errors  
+|
+| -- extraction_errors/
+|
+| -- compile_errors/  
 |
 | -- tests_ran
 |  
@@ -162,6 +165,15 @@ report
       | -- pom.xml (Patched version)  
       | -- target (Not persisted between runs)  
 ```
+
+# Error File Formats
+```verbatim
+FILE = LINE*
+LINE = STUDENT_NAME ":" ERROR_REASON "\n"
+STUDENT_NAME = [^\n:]+
+ERROR_REASON = [^\n]*
+```
+
 # Storing Diffs
 Goal: Create diff of src/main folder and the pom.xml  
 To save space and simplify the project structure, we move each students pom.xml to src/main/ before creating the diff. 

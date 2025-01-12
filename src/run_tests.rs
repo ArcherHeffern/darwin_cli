@@ -10,7 +10,7 @@ use crate::{
     config::{
         compile_errors_file, darwin_root, diff_dir, student_diff_file, student_project_file,
         student_result_file, tests_ran_file,
-    }, project_runner::MavenProject, util::{file_append_line, is_student, is_test}
+    }, project_runner::maven_project, util::{file_append_line, is_student, is_test}
 };
 
 pub fn concurrent_run_tests(
@@ -116,7 +116,7 @@ fn _run_test_for_student(
     dest_file: &Path,
 ) -> Result<()> {
     let diff_path = student_diff_file(student);
-    MavenProject::new().recreate_normalized_project(project_path, &diff_path)?;
+    maven_project().recreate_normalized_project(project_path, &diff_path)?;
     if let Err(e) = compile(project_path) {
         let compile_error_path = compile_errors_file();
         let mut compile_error_file = OpenOptions::new()

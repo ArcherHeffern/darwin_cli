@@ -1,13 +1,13 @@
 use crate::config::{
-    compile_errors_file, darwin_root, diff_dir, main_dir, projects_dir, results_dir, student_diff_file, test_dir, tests_ran_file
+    compile_errors_file, darwin_root, diff_dir, extraction_errors_file, main_dir, projects_dir, results_dir, student_diff_file, test_dir, tests_ran_file
 };
-use crate::util::extract_file;
+use crate::util::{extract_file, file_append_line};
 use std::fs::{remove_dir_all, File};
 use std::io::{Error, ErrorKind, Result};
 use std::{collections::HashSet, fs, path::Path};
 use tempfile::{tempdir, tempfile};
 use zip::ZipArchive;
-use crate::project_runner::{self, MavenProject};
+use crate::project_runner::{self, maven_project};
 
 pub fn create_darwin(
     project_skeleton: &Path,
@@ -62,17 +62,16 @@ fn _create_darwin(
 ) -> Result<()> {
     fs::create_dir_all(darwin_root())?;
     fs::create_dir_all(diff_dir())?;
-    fs::create_dir_all(main_dir())?;
-    fs::create_dir_all(test_dir())?;
     fs::create_dir_all(projects_dir())?;
     fs::create_dir_all(results_dir())?;
     File::create(tests_ran_file())?; // Possible error for this and below line if the leading paths don't exist.
+    File::create(extraction_errors_file())?;
     File::create(compile_errors_file())?;
 
-    project_runner::MavenProject::new().init_skeleton(skeleton_path, Some(copy_ignore_set))?;
-
+    maven_project().init_skeleton(skeleton_path, Some(copy_ignore_set))?;
 
     submissions_to_diffs(submission_zipfile_path, copy_ignore_set, |s, e| {
+        file_append_line(&extraction_errors_file(), &format!("{}: {}", s, e.to_string())).expect("We should be able to write to extraction errors file");
         eprintln!("Error extracting {}'s submission: {}", s, e)
     })?;
 
@@ -107,13 +106,17 @@ fn submissions_to_diffs(
             ));
         }
 
-        let mvn = MavenProject::new();
+        let project = maven_project();
         let mut student_project_zip = ZipArchive::new(student_submission_file)?;
         let normalized_project = tempdir()?;
-        mvn.zip_submission_to_normalized_form(&mut student_project_zip, normalized_project.path(), Some(copy_ignore_set))
-            .inspect_err(|e|on_submission_extraction_error(student_name, e))?;
-        mvn.create_normalized_project_diff(normalized_project.path(), &student_diff_file(student_name))
-            .inspect_err(|e|on_submission_extraction_error(student_name, e))?;
+        if let Err(e) = project.zip_submission_to_normalized_form(&mut student_project_zip, normalized_project.path(), Some(copy_ignore_set)) {
+            on_submission_extraction_error(student_name, &e);
+            continue;
+        }
+        if let Err(e) = project.create_normalized_project_diff(normalized_project.path(), &student_diff_file(student_name)) {
+            on_submission_extraction_error(student_name, &e);
+            continue;
+        }
     }
 
     Ok(())
