@@ -5,7 +5,7 @@ use std::{
 use zip::ZipArchive;
 
 use crate::{
-    config::{darwin_root, skel_dir, tmp_dir}, move_to_tmp_location_and_back::MoveToTempLocationAndBack, util::{self, create_diff, extract_zipfile, patch, project_root_in_zip}
+    config::{darwin_root, skel_dir, tmp_dir}, move_to_tmp_location_and_back::MoveToTempLocationAndBack, types::{TestResult, TestResultError}, util::{self, create_diff, extract_zipfile, patch, project_root_in_zip}
 };
 
 mod maven;
@@ -29,6 +29,7 @@ pub struct Project {
     list_tests_fn: fn(&Project) -> HashSet<String>,
     run_test_fn: fn(&Project, &Path, &str) -> Result<()>,
     relocate_test_results_fn: fn(&Project, &Path, &str, &Path) -> Result<()>, // project, project_path, test, dest_file
+    parse_result_report_fn: fn(&Project, &Path, &str, &str) -> std::result::Result<Vec<TestResult>, TestResultError>,
     // Result target: Should be a !format of the test name and student name
 }
 
@@ -64,6 +65,7 @@ pub fn maven_project() -> Project {
         list_tests_fn: maven::list_tests,
         run_test_fn: maven::run_test,
         relocate_test_results_fn: maven::relocate_test_results,
+        parse_result_report_fn: maven::parse_result_report,
     }
 }
 
@@ -220,6 +222,10 @@ impl Project {
 
     pub fn relocate_test_results(&self, project_path: &Path, test: &str, dest_file: &Path) -> Result<()> {
         (self.relocate_test_results_fn)(self, project_path, test, dest_file)
+    }
+
+    pub fn parse_result_report(&self, report_path: &Path, student: &str, test: &str) -> std::result::Result<Vec<TestResult>, TestResultError> {
+        (self.parse_result_report_fn)(self, report_path, student, test)
     }
 }
 
