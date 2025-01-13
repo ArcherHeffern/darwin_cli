@@ -1,53 +1,19 @@
-__Current__
-- Create report to distribute to TA's 
+__P1__
+- Create config file
+- Multithreading running into race conditions when listing test files
+- Ensure report works with abritrary TestResults
 
-- How to add a student? 
-- What if student has multiple submissions? 
-- Multithread ok? 
-- Catch all run tests command for ease of use? 
+__P2__
+- Report should show extraction errors
+- Compile errors show correctly
 
-Parse XML file better? 
-mvn -Dtest=AllSequentialTests surefire-report:report
-Download project better. Should include test dir and src/main instead of project/main
-
-__Later__
-- Parsing of result files
-  - What if is run multiple times and fails 3/5? 
-  - Can we actually parse the result files? 
-- Check for plagiarism
+__P3__
+- Add student / Update with new submission file
+- Allow for arbitrary submission sources - Not just moodle
 - Locate anomolies: Very large diff, long runnings tests
-- Summarize results
-- Compile error reasoning. 
+- Run in container for security reasons
 
-__Minor__
-- Remove all files and directories from project that do not belong
-validate create project skel contains pom.xml
-
-__Done__
-- Operations that modify state (commands) should be separate from those that retrieve state (queries)
-- CQS: command handler (Printing) -> validation -> core logic
-- Make parallelizable, project/ 
-- Download 
-- List all results
-
-# Run in VM's or some other way for security reasons. 
-# Make it work for other langauges
-## Protocol
-Grading skel
-| -- src
-| -- tests
-
-Student zipfile
-| -- src
-| -- test (Optional)
-
-## Needs adapters
-- extracting config files (eg. pom.xml)
-- compile commands
-- testing commands
-- Reading test files
-- Finding test files
-- Displaying test results on the frontend
-
-## Make it work for other sources
-- Change create project
+__To test during school year__
+- What if student has multiple submissions? 
+- Catch all run tests command for ease of use? 
+- Moodle Parsing of result files if test was ran multiple times
