@@ -4,10 +4,6 @@ pub fn darwin_root() -> PathBuf {
     PathBuf::from(".darwin")
 }
 
-    pub fn tmp_dir() -> PathBuf {
-        darwin_root().join("tmp")
-    }
-
     pub fn tests_ran_file() -> PathBuf {
         darwin_root().join("tests_ran")
     }
@@ -58,3 +54,7 @@ pub fn darwin_root() -> PathBuf {
             pub fn main_dir() -> PathBuf {
                 src_dir().join("main")
             }
+    
+    pub fn diff_exclude_dir() -> PathBuf {
+        darwin_root().join("diff_exclude")
+    }

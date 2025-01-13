@@ -71,7 +71,7 @@ fn _create_darwin(
     File::create(extraction_errors_file())?;
     File::create(compile_errors_file())?;
 
-    project.init_skeleton(skeleton_path, Some(copy_ignore_set))?;
+    project.init_skeleton(skeleton_path)?;
 
     submissions_to_diffs(project, submission_zipfile_path, copy_ignore_set, |s, e| {
         file_append_line(&extraction_errors_file(), &format!("{}: {}", s, e.to_string())).expect("We should be able to write to extraction errors file");

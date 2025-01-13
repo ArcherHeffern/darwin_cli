@@ -1,36 +1,54 @@
 use std::{
-    collections::{HashMap, HashSet}, fs::{self, create_dir_all, File}, io::{Error, ErrorKind, Result}, os::unix::fs::symlink, path::{Path, PathBuf}
+    collections::{HashMap, HashSet},
+    fs::{self, create_dir_all, remove_file, File},
+    io::{Error, ErrorKind, Result},
+    os::unix::fs::symlink,
+    path::{Path, PathBuf},
 };
 
 use zip::ZipArchive;
 
 use crate::{
-    config::{darwin_root, skel_dir, tmp_dir}, move_to_tmp_location_and_back::MoveToTempLocationAndBack, types::{TestResult, TestResultError}, util::{self, create_diff, extract_zipfile, patch, project_root_in_zip}
+    config::{darwin_root, diff_exclude_dir, skel_dir},
+    types::{TestResult, TestResultError},
+    util::{self, create_diff, extract_zipfile, patch, path_remove_trailing_slash, project_root_in_zip},
 };
 
 mod maven;
 
-// Report Include Map
-// Skel Mapping
-// Zipfile Mapping
-
-// If in zipfile mapping or both, diff
-// If only in Skel, symlink
-
-// Remove copy_ignore_set in place of ignore
-
 #[derive(Clone)]
 pub struct Project {
+    /// Maps directories and files in project skeleton, to location they should be stored to when diffing and running tests
     skel_mapping: HashMap<PathBuf, PathBuf>,
+
+    /// Maps directories and files in student submission, to location they should be stored to when diffing and running tests
     submission_zipfile_mapping: HashMap<PathBuf, PathBuf>,
-    ignore: HashSet<String>,
+
+    /// Not used
+    _ignore: HashSet<String>,
+
+    /// Paths that are not stored while diffing. This is calculated as skel_mapping - submission_zipfile_mapping
+    /// This is useful for entries that should not be modified by students, for example testfiles.
     diff_exclude: HashSet<PathBuf>,
-    compile_fn: fn(&Project, &Path) -> Result<()>,
+
+    /// Given a normalized skeleton (access via `skeleton_dir()`), lists all test names to be used as input for 
+    /// * run_test_fn
+    /// * relocate_test_results_fn
+    /// * parse_result_report_fn
     list_tests_fn: fn(&Project) -> HashSet<String>,
+
+    /// Given a normalized project (`&Path`), compiles the project
+    compile_fn: fn(&Project, &Path) -> Result<()>,
+
+    /// Given a normalized project (`&Path`), and a test name (`&str`), run tests and produce a test report
     run_test_fn: fn(&Project, &Path, &str) -> Result<()>,
+
+    /// May remove
     relocate_test_results_fn: fn(&Project, &Path, &str, &Path) -> Result<()>, // project, project_path, test, dest_file
-    parse_result_report_fn: fn(&Project, &Path, &str, &str) -> std::result::Result<Vec<TestResult>, TestResultError>,
-    // Result target: Should be a !format of the test name and student name
+
+    /// Given a test report (&Path), parse into `Vec<TestResult>`
+    parse_result_report_fn:
+        fn(&Project, &Path, &str, &str) -> std::result::Result<Vec<TestResult>, TestResultError>,
 }
 
 pub fn maven_project() -> Project {
@@ -52,30 +70,58 @@ pub fn maven_project() -> Project {
     ignore.insert(String::from(".git"));
     ignore.insert(String::from(".gitignore"));
 
-    let skel_destinations: HashSet<PathBuf> = skel_mapping.values().cloned().collect();
-    let submission_destinations: HashSet<PathBuf> = submission_zipfile_mapping.values().cloned().collect();
-    let diff_exclude = skel_destinations.iter().cloned().filter(|skel_dest|!submission_destinations.contains(skel_dest)).collect();
-
-    Project {
+    Project::new(
         skel_mapping,
         submission_zipfile_mapping,
         ignore,
-        diff_exclude,
-        compile_fn: maven::compile,
-        list_tests_fn: maven::list_tests,
-        run_test_fn: maven::run_test,
-        relocate_test_results_fn: maven::relocate_test_results,
-        parse_result_report_fn: maven::parse_result_report,
-    }
+        maven::compile,
+        maven::list_tests,
+        maven::run_test,
+        maven::relocate_test_results,
+        maven::parse_result_report,
+    )
 }
 
-
 impl Project {
-    pub fn init_skeleton(
-        &self,
-        skeleton_path: &Path,
-        copy_ignore_set: Option<&HashSet<&str>>,
-    ) -> Result<()> {
+    pub fn new(
+        skel_mapping: HashMap<PathBuf, PathBuf>,
+        submission_zipfile_mapping: HashMap<PathBuf, PathBuf>,
+        _ignore: HashSet<String>,
+        compile_fn: fn(&Project, &Path) -> Result<()>,
+        list_tests_fn: fn(&Project) -> HashSet<String>,
+        run_test_fn: fn(&Project, &Path, &str) -> Result<()>,
+        relocate_test_results_fn: fn(&Project, &Path, &str, &Path) -> Result<()>, // project, project_path, test, dest_file
+        parse_result_report_fn: fn(
+            &Project,
+            &Path,
+            &str,
+            &str,
+        )
+            -> std::result::Result<Vec<TestResult>, TestResultError>,
+    ) -> Self {
+        let skel_destinations: HashSet<PathBuf> = skel_mapping.values().cloned().collect();
+        let submission_destinations: HashSet<PathBuf> =
+            submission_zipfile_mapping.values().cloned().collect();
+        let diff_exclude = skel_destinations
+            .iter()
+            .cloned()
+            .filter(|skel_dest| !submission_destinations.contains(skel_dest))
+            .collect();
+
+        Project {
+            skel_mapping,
+            submission_zipfile_mapping,
+            _ignore,
+            diff_exclude,
+            compile_fn,
+            list_tests_fn,
+            run_test_fn,
+            relocate_test_results_fn,
+            parse_result_report_fn,
+        }
+    }
+
+    pub fn init_skeleton(&self, skeleton_path: &Path) -> Result<()> {
         for (from, to) in self.skel_mapping.iter() {
             if !skeleton_path.join(from).exists() {
                 return Err(Error::new(
@@ -83,33 +129,46 @@ impl Project {
                     format!("Expected {:?} to exist in skeleton", from),
                 ));
             }
+
+            let from = skeleton_path.join(from);
+            let to = match self.diff_exclude.contains(to) {
+                true => {
+                    diff_exclude_dir()
+                }
+                false => skel_dir(),
+            }
+            .join(to);
             if !from.to_string_lossy().ends_with('/') {
-                if !skeleton_path.join(from).is_file() {
+                if !from.is_file() {
                     return Err(Error::new(
                         ErrorKind::Other,
-                        format!("Expected {:?} to be a file", from),
+                        format!("Expected {:?} to be a file", &from),
                     ));
                 } else {
-                    let from = skeleton_path.join(from);
-                    let to = skel_dir().join(to);
                     if let Some(parent) = to.parent() {
                         create_dir_all(parent)?;
                     }
-                    fs::copy(&from, &to).map_err(|e|Error::new(ErrorKind::Other, format!("Failed to copy {:?} to {:?}: {}", from, to, e)))?;
+                    fs::copy(&from, &to).map_err(|e| {
+                        Error::new(
+                            ErrorKind::Other,
+                            format!("Failed to copy {:?} to {:?}: {}", from, to, e),
+                        )
+                    })?;
                 }
             }
             if from.to_string_lossy().ends_with('/') {
-                if !skeleton_path.join(from).is_dir() {
+                if !from.is_dir() {
                     return Err(Error::new(
                         ErrorKind::Other,
                         format!("Expected {:?} to be a directory", from),
                     ));
                 } else {
-                    util::copy_dir_all(
-                        &skeleton_path.join(from),
-                        &skel_dir().join(to),
-                        copy_ignore_set,
-                    )?;
+                    util::copy_dir_all(&from, &to, None).map_err(|e| {
+                        Error::new(
+                            ErrorKind::Other,
+                            format!("Failed to copy {:?} to {:?}: {}", from, to, e),
+                        )
+                    })?;
                 }
             }
         }
@@ -123,7 +182,10 @@ impl Project {
         copy_ignore_set: Option<&HashSet<&str>>,
     ) -> Result<()> {
         if zip.is_empty() {
-            return Err(Error::new(ErrorKind::NotFound, "Expected zip to have contents"));
+            return Err(Error::new(
+                ErrorKind::NotFound,
+                "Expected zip to have contents",
+            ));
         }
 
         let root = project_root_in_zip(zip, &self.submission_zipfile_mapping.keys().collect())?;
@@ -133,7 +195,7 @@ impl Project {
                 let file = zip.by_index(i).ok()?;
                 let filename = PathBuf::from(file.name());
                 let file_name = filename.file_name()?.to_str()?;
-                if copy_ignore_set.is_some_and(|s|s.contains(file_name)) {
+                if copy_ignore_set.is_some_and(|s| s.contains(file_name)) {
                     return None;
                 }
                 let filename = PathBuf::from(filename.strip_prefix(&root).ok()?);
@@ -160,16 +222,13 @@ impl Project {
         Ok(())
     }
 
-    pub fn create_normalized_project_diff(&self, normalized_project: &Path, diff_dest: &Path) -> Result<()> {
-        let skd = skel_dir();
-        let td = tmp_dir();
-        let tmp_mover = MoveToTempLocationAndBack::create(&skd, &td, &self.diff_exclude);
-        tmp_mover.move_to_temp_location()?;
-
+    pub fn create_normalized_project_diff(
+        &self,
+        normalized_project: &Path,
+        diff_dest: &Path,
+    ) -> Result<()> {
         create_diff(&skel_dir(), normalized_project, diff_dest)?;
-
         Ok(())
-
     }
 
     /// If in diff_exclude, temporarily move out skel, patch, then move back, and symlink all entrys of diff_exclude in
@@ -180,29 +239,21 @@ impl Project {
         assert!(darwin_root().is_dir());
         assert!(!project_path.exists());
 
-        let skd = skel_dir();
-        let td = tmp_dir();
-        let tmp_mover = MoveToTempLocationAndBack::create(&skd, &td, &self.diff_exclude);
-        tmp_mover.move_to_temp_location()?;
-
         patch(&skel_dir(), diff_path, project_path, true)?;
 
-        drop(tmp_mover); // Move all entrys back
-
-        for to_exclude in self.diff_exclude.iter() {
-            let original = skel_dir().join(to_exclude).canonicalize()?;
-            let link = project_path.join(to_exclude);
+        for excluded in self.diff_exclude.iter() {
+            let original = diff_exclude_dir().join(excluded).canonicalize()?;
+            let mut link = project_path.join(excluded);
             if let Some(parent) = link.parent() {
                 fs::create_dir_all(parent)?;
             }
-            let mut link = link.to_str().expect("Path to be valid unicode");
-            if link.ends_with('/') {
-                link = &link[0..link.len()-1];
-            }
-            symlink(
-                &original,
-                &link,
-            ).map_err(|e|Error::new(ErrorKind::Other, format!("Failed to symlink {:?} to {:?}: {}", link, original, e)))?;
+            link = path_remove_trailing_slash(&link);
+            symlink(&original, &link).map_err(|e| {
+                Error::new(
+                    ErrorKind::Other,
+                    format!("Failed to symlink {:?} to {:?}: {}", link, original, e),
+                )
+            })?;
         }
 
         Ok(())
@@ -213,22 +264,81 @@ impl Project {
     }
 
     pub fn list_tests(&self) -> HashSet<String> {
-        (self.list_tests_fn)(self)
+        if let Err(e) = self.denormalize_skel() {
+            eprintln!("{}", e);
+        }
+        let mut res = HashSet::new();
+        match self.normalize_skel() {
+            Ok(()) => {
+                res = (self.list_tests_fn)(self);
+            }
+            Err(e) => {
+                eprintln!("{}", e);
+            }
+        }
+        if let Err(e) = self.denormalize_skel() {
+            eprintln!("{}", e);
+        }
+        res
+    }
+
+    fn normalize_skel(&self) -> Result<()> {
+        for excluded in self.diff_exclude.iter() {
+            let original = diff_exclude_dir().join(excluded).canonicalize()?;
+            let mut link = skel_dir().join(excluded);
+            link = path_remove_trailing_slash(&link);
+            symlink(&original, &link).map_err(|e| {
+                Error::new(
+                    ErrorKind::Other,
+                    format!("BBBFailed to symlink {:?} to {:?}: {}", link, original, e),
+                )
+            })?;
+        }
+
+        Ok(())
+    }
+
+    fn denormalize_skel(&self) -> Result<()> {
+        for excluded in self.diff_exclude.iter() {
+            let remove = skel_dir().join(excluded);
+            let remove = path_remove_trailing_slash(&remove);
+            if !remove.exists() {
+                continue;
+            }
+            remove_file(&remove).map_err(|e| {
+                Error::new(
+                    ErrorKind::Other,
+                    format!("Failed to remove what should be a symlink {:?}: {}", &remove, e),
+                )
+            })?;
+        }
+
+        Ok(())
+
     }
 
     pub fn run_test(&self, project_path: &Path, test: &str) -> Result<()> {
         (self.run_test_fn)(self, project_path, test)
     }
 
-    pub fn relocate_test_results(&self, project_path: &Path, test: &str, dest_file: &Path) -> Result<()> {
+    pub fn relocate_test_results(
+        &self,
+        project_path: &Path,
+        test: &str,
+        dest_file: &Path,
+    ) -> Result<()> {
         (self.relocate_test_results_fn)(self, project_path, test, dest_file)
     }
 
-    pub fn parse_result_report(&self, report_path: &Path, student: &str, test: &str) -> std::result::Result<Vec<TestResult>, TestResultError> {
+    pub fn parse_result_report(
+        &self,
+        report_path: &Path,
+        student: &str,
+        test: &str,
+    ) -> std::result::Result<Vec<TestResult>, TestResultError> {
         (self.parse_result_report_fn)(self, report_path, student, test)
     }
 }
-
 
 pub fn recreate_original_project(diff_path: &Path, dest: &Path) -> Result<()> {
     Ok(())
@@ -247,24 +357,27 @@ pub mod test {
 
     use super::maven_project;
 
-
     #[test]
     fn test_init_skeleton() {
         if darwin_root().exists() {
             remove_dir_all(darwin_root()).unwrap();
         }
         let project = maven_project();
-        project.init_skeleton(Path::new("./skel"), None).unwrap();
+        project.init_skeleton(Path::new("./skel")).unwrap();
     }
 
     #[test]
     fn test_zip_submission_to_normalized_form() {
         let file = File::open("./testing/test.zip").unwrap();
         let mut zip = ZipArchive::new(file).unwrap();
-        let dest_dir = Path::new("dest_dir_test");
-        remove_dir_all(&dest_dir).unwrap();
+        let dest_dir = Path::new("./testing/dest_dir_test");
+        if dest_dir.exists() {
+            remove_dir_all(&dest_dir).unwrap();
+        }
         let project = maven_project();
-        project.zip_submission_to_normalized_form(&mut zip, dest_dir, None).unwrap();
+        project
+            .zip_submission_to_normalized_form(&mut zip, dest_dir, None)
+            .unwrap();
     }
 
     #[test]
@@ -276,8 +389,12 @@ pub mod test {
         remove_dir_all(&dest_dir).unwrap();
         remove_file(&diff_dest).unwrap();
         let project = maven_project();
-        project.zip_submission_to_normalized_form(&mut zip, &dest_dir, None).unwrap();
-        project.create_normalized_project_diff(&dest_dir, &diff_dest).unwrap();
+        project
+            .zip_submission_to_normalized_form(&mut zip, &dest_dir, None)
+            .unwrap();
+        project
+            .create_normalized_project_diff(&dest_dir, &diff_dest)
+            .unwrap();
     }
 
     #[test]
@@ -297,8 +414,14 @@ pub mod test {
             remove_dir_all(&project_dest_path).unwrap();
         }
         let project = maven_project();
-        project.zip_submission_to_normalized_form(&mut zip, &dest_dir, None).unwrap();
-        project.create_normalized_project_diff(&dest_dir, &diff_dest).unwrap();
-        project.recreate_normalized_project(&project_dest_path, &diff_dest).unwrap();
+        project
+            .zip_submission_to_normalized_form(&mut zip, &dest_dir, None)
+            .unwrap();
+        project
+            .create_normalized_project_diff(&dest_dir, &diff_dest)
+            .unwrap();
+        project
+            .recreate_normalized_project(&project_dest_path, &diff_dest)
+            .unwrap();
     }
 }

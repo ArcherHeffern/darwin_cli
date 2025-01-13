@@ -20,7 +20,6 @@ mod util;
 mod view_student_results;
 mod view_student_submission;
 mod project_runner;
-mod move_to_tmp_location_and_back;
 
 #[derive(Parser, Debug)]
 #[command(

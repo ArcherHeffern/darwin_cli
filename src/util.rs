@@ -375,6 +375,14 @@ pub fn file_replace_line(filename: &Path, prev: &str, new: &str) -> Result<()> {
     Ok(())
 }
 
+pub fn path_remove_trailing_slash(path: &Path) -> PathBuf {
+    let mut path = path.to_str().expect("Path to be valid unicode");
+    if path.ends_with('/') {
+        path = &path[0..path.len() - 1];
+    }
+    PathBuf::from(path)
+}
+
 pub fn buffer_flatmap<R: std::io::Read, W: std::io::Write>(
     reader: &mut BufReader<R>,
     writer: &mut BufWriter<W>,
