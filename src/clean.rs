@@ -1,9 +1,9 @@
 use std::{
-    fs::{create_dir, remove_dir_all, File, OpenOptions},
+    fs::{create_dir, remove_dir_all, OpenOptions},
     io,
 };
 
-use crate::config::{compile_errors_file, projects_dir, results_dir, tests_ran_file};
+use crate::{config::{compile_errors_file, projects_dir, results_dir}, darwin_config::{read_config, write_config}};
 
 pub fn clean() -> io::Result<()> {
     remove_dir_all(projects_dir())?;
@@ -16,6 +16,8 @@ pub fn clean() -> io::Result<()> {
         .write(true)
         .truncate(true)
         .open(compile_errors_file())?;
-    File::create(tests_ran_file())?;
+    let mut config = read_config()?;
+    config.tests_run.clear();
+    write_config(config)?;
     Ok(())
 }

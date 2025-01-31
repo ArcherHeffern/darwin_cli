@@ -8,10 +8,6 @@ pub fn darwin_root() -> PathBuf {
         darwin_root().join("darwin.json")
     }
 
-    pub fn tests_ran_file() -> PathBuf {
-        darwin_root().join("tests_ran")
-    }
-
     pub fn diff_dir() -> PathBuf {
         darwin_root().join("submission_diffs")
     }

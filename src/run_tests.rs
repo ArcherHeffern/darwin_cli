@@ -8,11 +8,11 @@ use threadpool::ThreadPool;
 use crate::{
     config::{
         compile_errors_file, darwin_root, diff_dir, student_diff_file, student_project_file,
-        student_result_file, tests_ran_file,
-    }, project_runner::Project, util::{file_append_line, is_student, is_test}
+        student_result_file
+    }, darwin_config::{read_config, write_config}, project_runner::Project, util::{file_append_line, is_student, is_test}
 };
 
-pub fn concurrent_run_tests(
+pub fn concurrent_run_test(
     project: &Project,
     test: &str,
     num_threads: usize,
@@ -26,8 +26,14 @@ pub fn concurrent_run_tests(
             format!("Test {} not recognized", test),
         ));
     }
+    if read_config()?.tests_run.contains(&test.to_string()) {
+        return Err(io::Error::new(
+            ErrorKind::NotFound,
+            format!("Test {} already ran", test),
+        ));
+    }
 
-    _concurrent_run_tests(
+    _concurrent_run_test(
         project,
         test,
         num_threads,
@@ -37,7 +43,7 @@ pub fn concurrent_run_tests(
     )
 }
 
-fn _concurrent_run_tests(
+fn _concurrent_run_test(
     project: &Project,
     test: &str,
     num_threads: usize,
@@ -66,7 +72,11 @@ fn _concurrent_run_tests(
         })
     }
     threadpool.join();
-    file_append_line(&tests_ran_file(), test)
+
+    let mut config = read_config()?;
+    config.tests_run.push(test.to_string());
+    write_config(config)?;
+    Ok(())
 }
 
 pub fn run_test_for_student(project: &Project, student: &str, test: &str) -> Result<()> {

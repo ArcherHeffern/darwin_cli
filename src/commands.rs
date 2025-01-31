@@ -5,9 +5,19 @@ use std::{
     path::Path,
 };
 
+use strum::IntoEnumIterator;
+
 use crate::{
-    anonomize, clean, config::darwin_root, create_darwin, create_report, darwin_config, download_results, list_students::{self}, plagiarism_checker, project_runner::Project, run_tests::{self}, types::TestResultError, util::{prompt_digit, prompt_yn}, view_student_results, view_student_submission
+    anonomize, clean, config::darwin_root, create_darwin, create_report, darwin_config::{self, ProjectType}, download_results, list_students::{self}, plagiarism_checker, project_runner::Project, run_tests::{self}, types::TestResultError, util::{prompt_digit, prompt_yn}, view_student_results, view_student_submission
 };
+
+pub fn list_project_types() {
+    for t in ProjectType::iter() {
+        if !matches!(t, ProjectType::None) {
+            println!("{:?}", t);
+        }
+    }
+}
 
 pub fn create_darwin(
     project: &Project,
@@ -173,7 +183,7 @@ pub fn run_test_for_student(project: &Project, student: &str, test: &str) {
 }
 
 pub fn run_tests(project: &Project, test: &str, num_threads: usize) {
-    match run_tests::concurrent_run_tests(
+    match run_tests::concurrent_run_test(
         project,
         test,
         num_threads,

@@ -9,8 +9,8 @@ use serde::Serialize;
 use tempfile::tempdir;
 
 use crate::{
-    config::{darwin_root, student_diff_file, test_dir, tests_ran_file}, darwin_config, list_students::list_students, project_runner::{recreate_original_project, Project}, types::{StatusMsg, TestResult, TestResultError, TestResults}, util::{
-        file_contains_line, flatten_move_recursive, list_files_recursively,
+    config::{darwin_root, student_diff_file, test_dir}, darwin_config::{self, read_config}, list_students::list_students, project_runner::{recreate_original_project, Project}, types::{StatusMsg, TestResult, TestResultError, TestResults}, util::{
+        flatten_move_recursive, list_files_recursively,
     }, view_student_results::parse_test_results
 };
 
@@ -99,6 +99,7 @@ pub fn create_report(project: &Project, report_path: &Path, tests: &Vec<String>,
         ));
     }
     let actual_tests = darwin_config::list_tests();
+    let tests_run = read_config()?.tests_run;
     for test in tests {
         if !actual_tests.contains(test) {
             return Err(Error::new(
@@ -106,7 +107,7 @@ pub fn create_report(project: &Project, report_path: &Path, tests: &Vec<String>,
                 format!("{} is not a test", test),
             ));
         }
-        if !file_contains_line(&tests_ran_file(), test)? {
+        if !tests_run.contains(test) {
             println!(
                 "Warning! {} is a test but it wasn't run for all students",
                 test

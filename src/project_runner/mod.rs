@@ -51,11 +51,16 @@ pub struct Project {
         fn(&Project, &Path, &str, &str) -> std::result::Result<Vec<TestResult>, TestResultError>,
 }
 
-pub fn project_type_to_project(project_type: ProjectType) -> Project {
+pub fn project_type_to_project(project_type: &ProjectType) -> Project {
     match project_type {
+        ProjectType::None => no_project(),
         ProjectType::MavenSurefire => maven_project(), 
         ProjectType::Go => go_project(),
     }
+}
+
+pub fn no_project() -> Project {
+    maven_project()
 }
 
 pub fn maven_project() -> Project {

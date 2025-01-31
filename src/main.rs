@@ -1,7 +1,8 @@
 use camino::Utf8PathBuf;
 use clap::{Parser, Subcommand};
 use config::darwin_root;
-use project_runner::maven_project;
+use darwin_config::{read_config, ProjectType};
+use project_runner::{no_project, project_type_to_project};
 use std::path::{Path, PathBuf};
 use std::{collections::HashSet, fs};
 
@@ -37,7 +38,9 @@ struct Cli {
 
 #[derive(Debug, Subcommand)]
 enum SubCommand {
+    ListProjectTypes,
     CreateProject {
+        project_type: ProjectType,
         project_skeleton: Utf8PathBuf,
         moodle_submissions_zipfile: Utf8PathBuf,
     },
@@ -114,18 +117,27 @@ fn main() {
     let command = cli.command;
     if matches!(command, SubCommand::CreateProject { .. })
         || matches!(command, SubCommand::Auto { .. })
+        || matches!(command, SubCommand::ListProjectTypes)
     {
     } else if !darwin_path.exists() {
         eprintln!("create project first");
         return;
     }
     
-    let project = maven_project();
+    let project = match command {
+        SubCommand::CreateProject { ref project_type, .. } => project_type_to_project(project_type),
+        SubCommand::ListProjectTypes => no_project(),
+        _ => project_type_to_project(&read_config().unwrap().project_type)
+    };
 
     match command {
+        SubCommand::ListProjectTypes => {
+            commands::list_project_types();
+        }
         SubCommand::CreateProject {
             project_skeleton,
             moodle_submissions_zipfile,
+            ..
         } => {
             commands::create_darwin(
                 &project,
