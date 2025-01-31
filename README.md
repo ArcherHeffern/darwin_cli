@@ -109,7 +109,6 @@ In progress! See `src/project_runner/mod.rs` and `src/project_runner/maven.rs`.
 
 # Developer Documentation
 ## darwin.json Config File
-In progress!
 ```verbatim
 {
       version: string,

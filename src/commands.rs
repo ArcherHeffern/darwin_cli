@@ -6,7 +6,7 @@ use std::{
 };
 
 use crate::{
-    anonomize, clean, config::darwin_root, create_darwin, create_report, download_results, list_students::{self}, plagiarism_checker, project_runner::Project, run_tests::{self}, types::TestResultError, util::{prompt_digit, prompt_yn}, view_student_results, view_student_submission
+    anonomize, clean, config::darwin_root, create_darwin, create_report, darwin_config, download_results, list_students::{self}, plagiarism_checker, project_runner::Project, run_tests::{self}, types::TestResultError, util::{prompt_digit, prompt_yn}, view_student_results, view_student_submission
 };
 
 pub fn create_darwin(
@@ -54,7 +54,7 @@ pub fn auto(
         return;
     }
 
-    let tests: Vec<String> = project.list_tests().iter().cloned().collect();
+    let tests: Vec<String> = darwin_config::list_tests().iter().cloned().collect();
     let selected_tests = auto_select_tests(&tests).unwrap();
     if selected_tests.is_empty() {
         eprintln!("No tests selected. Exiting...");
@@ -157,8 +157,8 @@ pub fn list_students() {
     }
 }
 
-pub fn list_tests(project: &Project) {
-    for test in project.list_tests() {
+pub fn list_tests(_project: &Project) {
+    for test in darwin_config::list_tests() {
         println!("{}", test);
     }
 }
@@ -219,7 +219,7 @@ pub fn view_student_result(project: &Project, student: &str, test: &str, view_mo
 }
 
 pub fn view_all_results(project: &Project, test: &str, summarize: &ViewMode) {
-    if !project.list_tests().contains(test) {
+    if !darwin_config::list_tests().iter().any(|t|t==test) {
         eprintln!("Test '{}' not recognized", test);
         return;
     }

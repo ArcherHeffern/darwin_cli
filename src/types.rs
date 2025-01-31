@@ -1,5 +1,6 @@
 use std::{collections::HashMap, fmt::Display, io::Error, time::Duration};
 
+
 pub struct TestResults {
     pub student: String,
     pub test: String,

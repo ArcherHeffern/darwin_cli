@@ -4,6 +4,10 @@ pub fn darwin_root() -> PathBuf {
     PathBuf::from(".darwin")
 }
 
+    pub fn darwin_config() -> PathBuf {
+        darwin_root().join("darwin.json")
+    }
+
     pub fn tests_ran_file() -> PathBuf {
         darwin_root().join("tests_ran")
     }
@@ -30,10 +34,6 @@ pub fn darwin_root() -> PathBuf {
         pub fn student_result_file(student: &str, test: &str) -> PathBuf {
             results_dir().join(format!("{}_{}", student, test))
         }
-
-    pub fn extraction_errors_file() -> PathBuf {
-        darwin_root().join("extraction_errors")
-    }
 
     pub fn compile_errors_file() -> PathBuf {
         darwin_root().join("compile_errors")

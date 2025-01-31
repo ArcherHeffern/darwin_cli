@@ -9,7 +9,7 @@ use serde::Serialize;
 use tempfile::tempdir;
 
 use crate::{
-    config::{darwin_root, student_diff_file, test_dir, tests_ran_file}, list_students::list_students, project_runner::{recreate_original_project, Project}, types::{StatusMsg, TestResult, TestResultError, TestResults}, util::{
+    config::{darwin_root, student_diff_file, test_dir, tests_ran_file}, darwin_config, list_students::list_students, project_runner::{recreate_original_project, Project}, types::{StatusMsg, TestResult, TestResultError, TestResults}, util::{
         file_contains_line, flatten_move_recursive, list_files_recursively,
     }, view_student_results::parse_test_results
 };
@@ -98,7 +98,7 @@ pub fn create_report(project: &Project, report_path: &Path, tests: &Vec<String>,
             "expected at least one test",
         ));
     }
-    let actual_tests = project.list_tests();
+    let actual_tests = darwin_config::list_tests();
     for test in tests {
         if !actual_tests.contains(test) {
             return Err(Error::new(

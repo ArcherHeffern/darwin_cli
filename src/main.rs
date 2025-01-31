@@ -20,6 +20,7 @@ mod util;
 mod view_student_results;
 mod view_student_submission;
 mod project_runner;
+mod darwin_config;
 
 #[derive(Parser, Debug)]
 #[command(

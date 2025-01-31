@@ -1,7 +1,7 @@
-use std::{collections::HashSet, fs::rename, io::Result};
+use std::{fs::rename, io::Result};
 
 use crate::{
-    config::{compile_errors_file, student_diff_file, student_result_file}, list_students::list_students, project_runner::Project, util::file_replace_line
+    config::{compile_errors_file, student_diff_file, student_result_file}, darwin_config, list_students::list_students, project_runner::Project, util::file_replace_line
 };
 
 pub fn anonomize(project: &Project) {
@@ -9,8 +9,8 @@ pub fn anonomize(project: &Project) {
     _anonomize(project);
 }
 
-fn _anonomize(project: &Project) {
-    let tests = project.list_tests();
+fn _anonomize(_project: &Project) {
+    let tests = darwin_config::list_tests();
 
     for (i, student) in list_students().iter().enumerate() {
         if anonomize_student(student, i, &tests).is_err() {
@@ -19,7 +19,7 @@ fn _anonomize(project: &Project) {
     }
 }
 
-fn anonomize_student(student: &str, i: usize, tests: &HashSet<String>) -> Result<()> {
+fn anonomize_student(student: &str, i: usize, tests: &Vec<String>) -> Result<()> {
     for test in tests {
         if student_result_file(student, test).is_file() {
             rename(

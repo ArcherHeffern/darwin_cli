@@ -11,7 +11,7 @@ use tempfile::NamedTempFile;
 use zip::read::ZipFile;
 use zip::ZipArchive;
 
-use crate::list_students;
+use crate::{darwin_config, list_students};
 use crate::project_runner::Project;
 
 pub fn prompt_digit<T: FromStr<Err = ParseIntError> + ToString>(prompt: &str) -> Result<T> {
@@ -232,9 +232,9 @@ fn _create_diff(original: &Path, deviant: &Path, dest_path: &Path) -> Result<()>
     Ok(())
 }
 
-pub fn is_test(project: &Project, test: &str) -> bool {
+pub fn is_test(_project: &Project, test: &str) -> bool {
     // validate list of tests is comma separated and all exist
-    project.list_tests().contains(test)
+    darwin_config::list_tests().iter().any(|t|t==test)
 }
 
 pub fn is_student(student: &str) -> bool {

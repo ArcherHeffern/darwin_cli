@@ -5,7 +5,7 @@ use std::{
 };
 
 use crate::{
-    list_students::list_students, project_runner::Project, types::TestResultError, view_student_results::parse_test_results
+    darwin_config, list_students::list_students, project_runner::Project, types::TestResultError, view_student_results::parse_test_results
 };
 
 pub fn download_results_summary(project: &Project, outfile: File, test: &str) -> Result<()> {
@@ -54,7 +54,7 @@ pub fn download_results_by_classname(project: &Project, out_file: &Path, test: &
         .open(out_file)?;
     let out_file = BufWriter::new(out_file);
     let mut wtr = csv::Writer::from_writer(out_file);
-    let tests = project.list_tests();
+    let tests = darwin_config::list_tests();
     let mut headers = vec![String::from("Name"), String::from("Error")];
     for test in tests {
         headers.push(test);

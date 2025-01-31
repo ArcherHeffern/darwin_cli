@@ -9,15 +9,15 @@ use std::{
 use zip::ZipArchive;
 
 use crate::{
-    config::{darwin_root, diff_exclude_dir, skel_dir},
-    types::{TestResult, TestResultError},
-    util::{self, create_diff, extract_zipfile, patch, path_remove_trailing_slash, project_root_in_zip},
+    config::{darwin_root, diff_exclude_dir, skel_dir}, darwin_config::ProjectType, types::{TestResult, TestResultError}, util::{self, create_diff, extract_zipfile, patch, path_remove_trailing_slash, project_root_in_zip}
 };
 
 mod maven;
 
 #[derive(Clone)]
 pub struct Project {
+    pub project_type: ProjectType,
+
     /// Maps directories and files in project skeleton, to location they should be stored to when diffing and running tests
     skel_mapping: HashMap<PathBuf, PathBuf>,
 
@@ -51,6 +51,13 @@ pub struct Project {
         fn(&Project, &Path, &str, &str) -> std::result::Result<Vec<TestResult>, TestResultError>,
 }
 
+pub fn project_type_to_project(project_type: ProjectType) -> Project {
+    match project_type {
+        ProjectType::MavenSurefire => maven_project(), 
+        ProjectType::Go => go_project(),
+    }
+}
+
 pub fn maven_project() -> Project {
     let mut skel_mapping = HashMap::new();
     skel_mapping.insert(PathBuf::from("src/main/"), PathBuf::from("src/main/"));
@@ -71,6 +78,7 @@ pub fn maven_project() -> Project {
     ignore.insert(String::from(".gitignore"));
 
     Project::new(
+        ProjectType::MavenSurefire, 
         skel_mapping,
         submission_zipfile_mapping,
         ignore,
@@ -82,8 +90,13 @@ pub fn maven_project() -> Project {
     )
 }
 
+pub fn go_project() -> Project {
+    todo!();
+}
+
 impl Project {
     pub fn new(
+        project_type: ProjectType,
         skel_mapping: HashMap<PathBuf, PathBuf>,
         submission_zipfile_mapping: HashMap<PathBuf, PathBuf>,
         _ignore: HashSet<String>,
@@ -109,6 +122,7 @@ impl Project {
             .collect();
 
         Project {
+            project_type,
             skel_mapping,
             submission_zipfile_mapping,
             _ignore,
@@ -263,6 +277,7 @@ impl Project {
         (self.compile_fn)(self, project_path)
     }
 
+    /// This should only be used when creating a project
     pub fn list_tests(&self) -> HashSet<String> {
         if let Err(e) = self.denormalize_skel() {
             eprintln!("{}", e);

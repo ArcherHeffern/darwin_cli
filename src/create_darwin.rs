@@ -1,9 +1,11 @@
 use crate::config::{
-    compile_errors_file, darwin_root, diff_dir, extraction_errors_file, projects_dir, results_dir, student_diff_file, tests_ran_file
+    compile_errors_file, darwin_config, darwin_root, diff_dir, projects_dir, results_dir, student_diff_file, tests_ran_file
 };
-use crate::util::{extract_file, file_append_line};
+use crate::darwin_config::{self, DarwinConfig};
+use crate::util::extract_file;
+use std::collections::HashMap;
 use std::fs::{remove_dir_all, File};
-use std::io::{Error, ErrorKind, Result};
+use std::io::{Error, ErrorKind, Result, Write};
 use std::{collections::HashSet, fs, path::Path};
 use tempfile::{tempdir, tempfile};
 use zip::ZipArchive;
@@ -68,25 +70,41 @@ fn _create_darwin(
     fs::create_dir_all(projects_dir())?;
     fs::create_dir_all(results_dir())?;
     File::create(tests_ran_file())?; // Possible error for this and below line if the leading paths don't exist.
-    File::create(extraction_errors_file())?;
     File::create(compile_errors_file())?;
 
     project.init_skeleton(skeleton_path)?;
 
-    submissions_to_diffs(project, submission_zipfile_path, copy_ignore_set, |s, e| {
-        file_append_line(&extraction_errors_file(), &format!("{}: {}", s, e.to_string())).expect("We should be able to write to extraction errors file");
-        eprintln!("Error extracting {}'s submission: {}", s, e)
+
+    let mut extraction_errors: HashMap<String, String> = HashMap::new();
+
+    submissions_to_diffs(project, submission_zipfile_path, copy_ignore_set, &mut |s, e| {
+        extraction_errors.insert(s.to_string(), e.to_string());
     })?;
+
+    create_config(project, extraction_errors)?;
+    Ok(())
+}
+
+fn create_config(project: &Project, extraction_errors: HashMap<String, String>) -> Result<()> {
+    let mut file = File::create(darwin_config())?;
+    // Expensive list tests
+    let tests: Vec<String> = project.list_tests().iter().cloned().collect();
+    let dc = DarwinConfig { version: String::from("1.0.0"), project_type: project.project_type.clone(), tests, tests_run: Vec::new(), extraction_errors };
+    serde_json::to_writer_pretty(&file, &dc)?;
+    file.flush()?;
+
 
     Ok(())
 }
 
-fn submissions_to_diffs(
+fn submissions_to_diffs<F>(
     project: &Project,
     submission_zipfile_path: &Path,
     copy_ignore_set: &HashSet<&str>,
-    on_submission_extraction_error: fn(&str, &Error), // Student name
-) -> Result<()> {
+    on_submission_extraction_error: &mut F, // Student name
+) -> Result<()> 
+where F: for<'a> FnMut(&'a str, &'a std::io::Error)
+{
     let zip = File::open(submission_zipfile_path)?;
     let mut zip = ZipArchive::new(zip)?;
 
