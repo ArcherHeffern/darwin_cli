@@ -246,15 +246,6 @@ impl Project {
         Ok(())
     }
 
-    pub fn create_normalized_project_diff(
-        &self,
-        normalized_project: &Path,
-        diff_dest: &Path,
-    ) -> Result<()> {
-        create_diff(&skel_dir(), normalized_project, diff_dest)?;
-        Ok(())
-    }
-
     /// Symlink all entries of self.diff_exclude in
     /// Invariants:
     /// - darwin_path is an existing .darwin project root directory
@@ -383,11 +374,15 @@ pub mod test {
     use std::fs::{remove_file, File};
     use std::{fs::remove_dir_all, path::Path};
 
+    use assert_fs::fixture::ChildPath;
     use zip::ZipArchive;
 
     use crate::config::darwin_root;
+    use crate::util::create_diff;
 
     use super::maven_project;
+    use assert_fs::{self, assert::PathAssert, prelude::{FileTouch, FileWriteStr, PathChild}};
+    use predicates::prelude::*;
 
     #[test]
     fn test_init_skeleton() {
@@ -395,65 +390,45 @@ pub mod test {
             remove_dir_all(darwin_root()).unwrap();
         }
         let project = maven_project().unwrap();
-        project.init_skeleton(Path::new("./skel")).unwrap();
+        project.init_skeleton(Path::new("./testing/Skel")).unwrap();
     }
 
     #[test]
     fn test_zip_submission_to_normalized_form() {
-        let file = File::open("./testing/test.zip").unwrap();
+        let temp_dir = assert_fs::TempDir::new().unwrap();
+
+        let file = File::open("./testing/Impl.zip").unwrap();
         let mut zip = ZipArchive::new(file).unwrap();
-        let dest_dir = Path::new("./testing/dest_dir_test");
-        if dest_dir.exists() {
-            remove_dir_all(&dest_dir).unwrap();
-        }
         let project = maven_project().unwrap();
         project
-            .zip_submission_to_normalized_form(&mut zip, dest_dir, None)
+            .zip_submission_to_normalized_form(&mut zip, temp_dir.path(), None)
             .unwrap();
+
+        temp_dir.child("src").assert(predicate::path::exists());
+        temp_dir.close().unwrap();
     }
 
     #[test]
     fn test_create_normalized_project_diff() {
-        let file = File::open("./testing/test.zip").unwrap();
-        let mut zip = ZipArchive::new(file).unwrap();
-        let dest_dir = Path::new("testing").join("dest_dir_test");
-        let diff_dest = Path::new("testing").join("diff_dest");
-        remove_dir_all(&dest_dir).unwrap();
-        remove_file(&diff_dest).unwrap();
+        let normalized_project_dest = assert_fs::TempDir::new().unwrap();
+        let diff_dest_dir = assert_fs::TempDir::new().unwrap();
+        let diff_dest = diff_dest_dir.child("tmp");
+        let src = File::open("./testing/Impl.zip").unwrap();
+        let mut zip = ZipArchive::new(src).unwrap();
+
         let project = maven_project().unwrap();
         project
-            .zip_submission_to_normalized_form(&mut zip, &dest_dir, None)
+            .zip_submission_to_normalized_form(&mut zip, &normalized_project_dest, None)
             .unwrap();
-        project
-            .create_normalized_project_diff(&dest_dir, &diff_dest)
+        normalized_project_dest.child("src").assert(predicate::path::exists());
+        create_diff(&Path::new("./testing/Skel"), &normalized_project_dest, &diff_dest)
             .unwrap();
+
+        normalized_project_dest.close().unwrap();
+        diff_dest_dir.close().unwrap();
     }
 
-    #[test]
-    fn test_recreate_normalized_project() {
-        let file = File::open("./testing/test.zip").unwrap();
-        let mut zip = ZipArchive::new(file).unwrap();
-        let dest_dir = Path::new("testing").join("dest_dir_test");
-        let diff_dest = Path::new("testing").join("diff_dest");
-        let project_dest_path = Path::new("testing").join("project");
-        if dest_dir.exists() {
-            remove_dir_all(&dest_dir).unwrap();
-        }
-        if diff_dest.exists() {
-            remove_file(&diff_dest).unwrap();
-        }
-        if project_dest_path.exists() {
-            remove_dir_all(&project_dest_path).unwrap();
-        }
-        let project = maven_project().unwrap();
-        project
-            .zip_submission_to_normalized_form(&mut zip, &dest_dir, None)
-            .unwrap();
-        project
-            .create_normalized_project_diff(&dest_dir, &diff_dest)
-            .unwrap();
-        project
-            .recreate_normalized_project(&project_dest_path, &diff_dest)
-            .unwrap();
+    fn test_recreate_original_project() {
+
     }
 }

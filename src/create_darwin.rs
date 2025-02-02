@@ -1,8 +1,8 @@
 use crate::config::{
-    compile_errors_file, darwin_root, diff_dir, projects_dir, results_dir, student_diff_file
+    compile_errors_file, darwin_root, diff_dir, projects_dir, results_dir, skel_dir, student_diff_file
 };
 use crate::darwin_config::{write_config, DarwinConfig};
-use crate::util::extract_file;
+use crate::util::{create_diff, extract_file};
 use std::collections::HashMap;
 use std::fs::{remove_dir_all, File};
 use std::io::{Error, ErrorKind, Result};
@@ -130,7 +130,7 @@ where F: for<'a> FnMut(&'a str, &'a std::io::Error)
             on_submission_extraction_error(student_name, &e);
             continue;
         }
-        if let Err(e) = project.create_normalized_project_diff(normalized_project.path(), &student_diff_file(student_name)) {
+        if let Err(e) = create_diff(&skel_dir(), normalized_project.path(), &student_diff_file(student_name)) {
             on_submission_extraction_error(student_name, &e);
             continue;
         }
