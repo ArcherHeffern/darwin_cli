@@ -510,7 +510,7 @@ mod tests {
 
     #[test]
     fn test_project_root_in_zip() {
-        let zip_path = Path::new("./testing/Skel.zip");
+        let zip_path = Path::new("./testing/Impl.zip");
         let zip_file = File::open(zip_path).unwrap();
         let mut zip = ZipArchive::new(zip_file).unwrap();
         let mut submission_zipfile_mapping = HashMap::new();
@@ -519,7 +519,7 @@ mod tests {
         submission_zipfile_mapping.insert(PathBuf::from("src/test/"), PathBuf::from("src/test/"));
 
         let root = project_root_in_zip(&mut zip, &submission_zipfile_mapping.keys().collect()).unwrap();
-        assert!(root == PathBuf::from("Skel")); 
+        assert!(root == PathBuf::from("Impl")); 
     }
 
     #[test]
