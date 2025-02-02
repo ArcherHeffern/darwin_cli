@@ -8,7 +8,7 @@ use std::{
 use strum::IntoEnumIterator;
 
 use crate::{
-    anonomize, clean, config::darwin_root, create_darwin, create_report, darwin_config::{self, ProjectType}, download_results, list_students::{self}, plagiarism_checker, project_runner::Project, run_tests::{self}, types::TestResultError, util::{prompt_digit, prompt_yn}, view_student_results, view_student_submission
+    anonomize, clean, config::darwin_root, create_darwin, create_report, darwin_config::{self, ProjectType}, download_results, list_students::{self}, plagiarism_checker, project_runner::Project, run_tests::{self}, types::TestResultError, util::{is_test, prompt_digit, prompt_yn}, view_student_results, view_student_submission
 };
 
 pub fn list_project_types() {
@@ -94,14 +94,14 @@ pub fn auto(
             n
         }
         Err(_) => {
-            let mut n_sections = 0;
+            let mut _n_sections = 0;
             loop {
                 if let Ok(r) = prompt_digit::<usize>("...") {
-                    n_sections = r;
+                    _n_sections = r;
                     break;
                 }
             }
-            n_sections
+            _n_sections
         }
     };
 
@@ -229,7 +229,7 @@ pub fn view_student_result(project: &Project, student: &str, test: &str, view_mo
 }
 
 pub fn view_all_results(project: &Project, test: &str, summarize: &ViewMode) {
-    if !darwin_config::list_tests().iter().any(|t|t==test) {
+    if !is_test(project, test) {
         eprintln!("Test '{}' not recognized", test);
         return;
     }
@@ -264,7 +264,7 @@ pub fn download_results_by_classname(project: &Project, test: &str, outfile: &st
     download_results::download_results_by_classname(project, out_file, test).unwrap();
 }
 
-pub fn view_student_submission(student: &str) {
+pub fn view_student_submission(project: &Project, student: &str) {
     let dest = Path::new(student);
     if dest.exists()
         && !prompt_yn(&format!("'{}' Exists. Continue? (Y/N)", student)).unwrap_or(false)
@@ -279,7 +279,7 @@ pub fn view_student_submission(student: &str) {
         return;
     }
 
-    if let Err(e) = view_student_submission::view_student_submission(student, dest) {
+    if let Err(e) = view_student_submission::view_student_submission(project, student, dest) {
         eprintln!("Error viewing student submission: {}", e);
     };
 }

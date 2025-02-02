@@ -29,7 +29,7 @@ pub struct Project {
 
     /// Paths that are not stored while diffing. This is calculated as skel_mapping - submission_zipfile_mapping
     /// This is useful for entries that should not be modified by students, for example testfiles.
-    diff_exclude: HashSet<PathBuf>,
+    pub diff_exclude: HashSet<PathBuf>,
 
     /// Given a normalized skeleton (access via `skeleton_dir()`), lists all test names to be used as input for 
     /// * run_test_fn
@@ -51,7 +51,7 @@ pub struct Project {
         fn(&Project, &Path, &str, &str) -> std::result::Result<Vec<TestResult>, TestResultError>,
 }
 
-pub fn project_type_to_project(project_type: &ProjectType) -> Project {
+pub fn project_type_to_project(project_type: &ProjectType) -> Result<Project> {
     match project_type {
         ProjectType::None => no_project(),
         ProjectType::MavenSurefire => maven_project(), 
@@ -59,11 +59,11 @@ pub fn project_type_to_project(project_type: &ProjectType) -> Project {
     }
 }
 
-pub fn no_project() -> Project {
+pub fn no_project() -> Result<Project> {
     maven_project()
 }
 
-pub fn maven_project() -> Project {
+pub fn maven_project() -> Result<Project> {
     let mut skel_mapping = HashMap::new();
     skel_mapping.insert(PathBuf::from("src/main/"), PathBuf::from("src/main/"));
     skel_mapping.insert(PathBuf::from("src/test/"), PathBuf::from("src/test/"));
@@ -95,11 +95,12 @@ pub fn maven_project() -> Project {
     )
 }
 
-pub fn go_project() -> Project {
+pub fn go_project() -> Result<Project> {
     todo!();
 }
 
 impl Project {
+    /// skel_mapping may not map 2 src paths to the same dest path
     pub fn new(
         project_type: ProjectType,
         skel_mapping: HashMap<PathBuf, PathBuf>,
@@ -116,7 +117,10 @@ impl Project {
             &str,
         )
             -> std::result::Result<Vec<TestResult>, TestResultError>,
-    ) -> Self {
+    ) -> Result<Self> {
+        if skel_mapping.values().collect::<HashSet<&PathBuf>>().len() != skel_mapping.values().len() {
+            return Err(Error::new(ErrorKind::Other, "skel_mapping cannot map multiple source directories to the same dest directory"));
+        }
         let skel_destinations: HashSet<PathBuf> = skel_mapping.values().cloned().collect();
         let submission_destinations: HashSet<PathBuf> =
             submission_zipfile_mapping.values().cloned().collect();
@@ -126,7 +130,7 @@ impl Project {
             .filter(|skel_dest| !submission_destinations.contains(skel_dest))
             .collect();
 
-        Project {
+        Ok(Project {
             project_type,
             skel_mapping,
             submission_zipfile_mapping,
@@ -137,7 +141,7 @@ impl Project {
             run_test_fn,
             relocate_test_results_fn,
             parse_result_report_fn,
-        }
+        })
     }
 
     pub fn init_skeleton(&self, skeleton_path: &Path) -> Result<()> {
@@ -234,6 +238,7 @@ impl Project {
             .collect();
 
         for (i, dest) in files_to_extract {
+            // Write this remapping into the config file
             let zipfile = zip.by_index(i).unwrap();
             extract_zipfile(zipfile, &dest_dir.join(&dest))?;
         }
@@ -250,19 +255,19 @@ impl Project {
         Ok(())
     }
 
-    /// If in diff_exclude, temporarily move out skel, patch, then move back, and symlink all entrys of diff_exclude in
+    /// Symlink all entries of self.diff_exclude in
     /// Invariants:
     /// - darwin_path is an existing .darwin project root directory
-    /// - project_path does not exist
-    pub fn recreate_normalized_project(&self, project_path: &Path, diff_path: &Path) -> Result<()> {
+    /// - dest does not exist
+    pub fn recreate_normalized_project(&self, dest: &Path, diff_path: &Path) -> Result<()> {
         assert!(darwin_root().is_dir());
-        assert!(!project_path.exists());
+        assert!(!dest.exists());
 
-        patch(&skel_dir(), diff_path, project_path, true)?;
+        patch(&skel_dir(), diff_path, dest, true)?;
 
         for excluded in self.diff_exclude.iter() {
             let original = diff_exclude_dir().join(excluded).canonicalize()?;
-            let mut link = project_path.join(excluded);
+            let mut link = dest.join(excluded);
             if let Some(parent) = link.parent() {
                 fs::create_dir_all(parent)?;
             }
@@ -276,6 +281,17 @@ impl Project {
         }
 
         Ok(())
+    }
+
+    /// Recreates students original project structure`
+    /// May later implement symlinking all diff_exclude files back in
+    /// symlink field for now does nothing
+    /// 
+    /// Invariants:
+    /// - project_path is an existing .darwin project root directory
+    /// - dest is an empty directory
+    pub fn recreate_original_project(&self, normalized_project: &Path, symlink: bool) -> Result<()> {
+        todo!();
     }
 
     pub fn compile(&self, project_path: &Path) -> Result<()> {
@@ -302,6 +318,7 @@ impl Project {
         res
     }
 
+    /// Add all symlinks to the skeleton
     fn normalize_skel(&self) -> Result<()> {
         for excluded in self.diff_exclude.iter() {
             let original = diff_exclude_dir().join(excluded).canonicalize()?;
@@ -310,7 +327,7 @@ impl Project {
             symlink(&original, &link).map_err(|e| {
                 Error::new(
                     ErrorKind::Other,
-                    format!("BBBFailed to symlink {:?} to {:?}: {}", link, original, e),
+                    format!("Failed to symlink {:?} to {:?}: {}", link, original, e),
                 )
             })?;
         }
@@ -318,6 +335,7 @@ impl Project {
         Ok(())
     }
 
+    /// Remove all symlinks from the skeleton. Should only be used after `normalize_skel`
     fn denormalize_skel(&self) -> Result<()> {
         for excluded in self.diff_exclude.iter() {
             let remove = skel_dir().join(excluded);
@@ -360,20 +378,14 @@ impl Project {
     }
 }
 
-pub fn recreate_original_project(diff_path: &Path, dest: &Path) -> Result<()> {
-    Ok(())
-}
 
 pub mod test {
     use std::fs::{remove_file, File};
-    use std::io::BufReader;
-    use std::path::PathBuf;
     use std::{fs::remove_dir_all, path::Path};
 
     use zip::ZipArchive;
 
     use crate::config::darwin_root;
-    use crate::project_runner::Project;
 
     use super::maven_project;
 
@@ -382,7 +394,7 @@ pub mod test {
         if darwin_root().exists() {
             remove_dir_all(darwin_root()).unwrap();
         }
-        let project = maven_project();
+        let project = maven_project().unwrap();
         project.init_skeleton(Path::new("./skel")).unwrap();
     }
 
@@ -394,7 +406,7 @@ pub mod test {
         if dest_dir.exists() {
             remove_dir_all(&dest_dir).unwrap();
         }
-        let project = maven_project();
+        let project = maven_project().unwrap();
         project
             .zip_submission_to_normalized_form(&mut zip, dest_dir, None)
             .unwrap();
@@ -408,7 +420,7 @@ pub mod test {
         let diff_dest = Path::new("testing").join("diff_dest");
         remove_dir_all(&dest_dir).unwrap();
         remove_file(&diff_dest).unwrap();
-        let project = maven_project();
+        let project = maven_project().unwrap();
         project
             .zip_submission_to_normalized_form(&mut zip, &dest_dir, None)
             .unwrap();
@@ -433,7 +445,7 @@ pub mod test {
         if project_dest_path.exists() {
             remove_dir_all(&project_dest_path).unwrap();
         }
-        let project = maven_project();
+        let project = maven_project().unwrap();
         project
             .zip_submission_to_normalized_form(&mut zip, &dest_dir, None)
             .unwrap();

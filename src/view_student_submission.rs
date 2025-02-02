@@ -1,18 +1,14 @@
 use std::{
-    fs::rename,
     io::{Error, Result},
     path::Path,
 };
 
 use crate::{
-    config::{main_dir, student_diff_file, test_dir},
-    list_students,
-    util::{copy_dir_all, patch},
-};
+    config::student_diff_file, list_students, project_runner::Project};
 
 // Should we coerce into working, or return error?
 
-pub fn view_student_submission(student: &str, dest: &Path) -> Result<()> {
+pub fn view_student_submission(project: &Project, student: &str, dest: &Path) -> Result<()> {
     // Enforces:
     // student exists
     // dest does not exist
@@ -41,12 +37,8 @@ pub fn view_student_submission(student: &str, dest: &Path) -> Result<()> {
         ));
     }
 
-    _view_student_submission(dest, &student_diff_path)
-}
+    project.recreate_normalized_project(dest, &student_diff_path)?;
+    project.recreate_original_project(dest, true)?;
 
-fn _view_student_submission(dest: &Path, student_diff_path: &Path) -> Result<()> {
-    patch(&main_dir(), student_diff_path, &dest.join("src"), true)?;
-    rename(dest.join("src").join("pom.xml"), dest.join("pom.xml"))?;
-    copy_dir_all(&test_dir(), &dest.join("src").join("test"), None)?;
     Ok(())
 }

@@ -1,7 +1,7 @@
 use std::{
     fs::{self, create_dir, create_dir_all, remove_dir_all},
     io::{Error, ErrorKind, Result},
-    path::Path,
+    path::{Path, PathBuf},
 };
 
 use handlebars::Handlebars;
@@ -9,7 +9,7 @@ use serde::Serialize;
 use tempfile::tempdir;
 
 use crate::{
-    config::{darwin_root, student_diff_file, test_dir}, darwin_config::{self, read_config}, list_students::list_students, project_runner::{recreate_original_project, Project}, types::{StatusMsg, TestResult, TestResultError, TestResults}, util::{
+    config::{darwin_root, student_diff_file}, darwin_config::{self, read_config}, list_students::list_students, project_runner::Project, types::{StatusMsg, TestResult, TestResultError, TestResults}, util::{
         flatten_move_recursive, list_files_recursively,
     }, view_student_results::parse_test_results
 };
@@ -170,7 +170,7 @@ fn _create_report_of_certain_students(
         )
     })?;
 
-    create_tests_page_html(&report_root.join("tests.html"), handlebars)?;
+    create_static_page_html(project, &report_root.join("tests.html"), handlebars)?;
     create_report_student_list(&report_root.join("index.html"), students, handlebars)?;
     create_student_reports(project, report_root, tests, students, handlebars)?;
 
@@ -317,10 +317,11 @@ fn _create_student_report(
     next_student: &str,
     student_template: &Handlebars<'_>,
 ) -> Result<()> {
-    let diff_path = student_diff_file(student);
     let student_dir = &report_root.join("students").join(student);
     let tmpdir = tempdir()?;
-    recreate_original_project(&diff_path, tmpdir.path())?;
+    // project.recreate_original_project(&diff_path, tmpdir.path())?;
+    project.recreate_normalized_project(&student_diff_file(student), tmpdir.path())?;
+    project.recreate_original_project(tmpdir.path(), false)?;
     let file_paths = list_files_recursively(tmpdir.path());
 
     let mut files = Vec::new();
@@ -534,8 +535,16 @@ fn create_student_report_html(
         .map_err(|e| Error::new(ErrorKind::Other, e.to_string()))
 }
 
-fn create_tests_page_html(dest: &Path, handlebars: &Handlebars) -> Result<()> {
-    let files: Vec<TestPageFileContext> = list_files_recursively(&test_dir())
+fn create_static_page_html(project: &Project, dest: &Path, handlebars: &Handlebars) -> Result<()> {
+    let mut files: Vec<PathBuf> = Vec::new();
+    for item in project.diff_exclude.iter() {
+        if item.is_dir() {
+            files.append(&mut list_files_recursively(item));
+        } else if item.is_file() {
+            files.push(item.clone());
+        }
+    }
+    let files: Vec<TestPageFileContext> = files
         .iter()
         .flat_map(|f| {
             let test_file_name = f

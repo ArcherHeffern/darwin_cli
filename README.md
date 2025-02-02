@@ -108,22 +108,11 @@ sys     1m10.835s
 In progress! See `src/project_runner/mod.rs` and `src/project_runner/maven.rs`.
 
 # Developer Documentation
-## darwin.json Config File
-```verbatim
-{
-      version: string,
-      project_type: string,
-      tests: [],
-      tests_run: [],
-      extraction_errors: {
-            student: reason
-      }
-}
-```
-
 ## .darwin folder structure
 ```verbatim
 .darwin
+| -- darwin.json (Documented below)
+|
 | -- diff_exclude/
 |     | -- code that students can't override (eg. testfiles). Gets symlinked into normalized projects
 | 
@@ -144,6 +133,19 @@ In progress! See `src/project_runner/mod.rs` and `src/project_runner/maven.rs`.
 |
 | -- compile_errors
 ```     
+
+## darwin.json Config File
+```verbatim
+{
+      version: string,
+      project_type: string,
+      tests: [],
+      tests_run: [],
+      extraction_errors: {
+            student: reason
+      }
+}
+```
 
 ### Example Maven Project Structure
 ```verbatim
@@ -193,3 +195,18 @@ LINE = STUDENT_NAME ":" ERROR_REASON "\n"
 STUDENT_NAME = [^\n:]+
 ERROR_REASON = [^\n]*
 ```
+
+# Previous ideas and why they don't work
+## coersion.json
+Contains reverse file mappings for each student generated when normalizing projects, so we can later recreate the original project structure.
+
+Required since the normalization mappings may map 2 source directories to the same destination directory.
+```verbatim
+{
+      student: {
+            to: from
+      }
+}
+```
+
+Issue: Normalization mappings must not map 2 source directories to the same destination directory. What if 2 directories have the same file? Also, when would this be used in practice? 

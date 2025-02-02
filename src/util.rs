@@ -6,10 +6,22 @@ use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::str::FromStr;
 use std::{fs::File, io, path::Path};
+use trie_of_lists::Trie;
 
-use tempfile::NamedTempFile;
+use tempfile::{tempdir, NamedTempFile};
 use zip::read::ZipFile;
 use zip::ZipArchive;
+
+// TODO: Extract out file tree library
+// 
+// Concept API
+// Tree::new("/").map_rename(
+//      |entry|
+//      if entry.is_file() {
+//          entry.set_extension(".html")
+//      }
+//      entry
+// ).copy_to(|file|dest.join(file));
 
 use crate::{darwin_config, list_students};
 use crate::project_runner::Project;
@@ -41,12 +53,15 @@ fn input(prompt: &str) -> Result<String> {
 /// 
 /// # Errors
 /// 
-/// Dest MUST not exist
+/// Dest may not exist, or be an empty directory
 pub fn copy_dir_all(
     src: &Path,
     dst: &Path,
     ignore: Option<&HashSet<&str>>,
 ) -> io::Result<()> {
+    if dst.is_dir() && dst.read_dir()?.any(|_|true) {
+        return Err(Error::from(ErrorKind::DirectoryNotEmpty));
+    }
     _copy_dir_all(src, dst, ignore).map_err(|e|Error::new(ErrorKind::Other, format!("Failed to copy {:?} to {:?}: {}", src, dst, e)))
 }
 pub fn _copy_dir_all(
@@ -54,7 +69,9 @@ pub fn _copy_dir_all(
     dst: impl AsRef<Path>,
     ignore: Option<&HashSet<&str>>,
 ) -> io::Result<()> {
-    fs::create_dir_all(&dst)?;
+    if !dst.as_ref().is_dir() {
+        fs::create_dir_all(&dst)?;
+    }
     for entry in fs::read_dir(src)? {
         let entry = entry?;
         let ty = entry.file_type()?;
@@ -83,6 +100,8 @@ pub fn flatten_move_recursive(
     _flatten_move_recursive(src, dst, ignore)
 }
 
+
+/// TODO: This is horrible. Destroy this with fire
 fn _flatten_move_recursive(
     src: &Path,
     dst: &Path,
@@ -241,11 +260,33 @@ pub fn is_student(student: &str) -> bool {
     list_students::list_students().iter().any(|s| s == student)
 }
 
+/// Applies transformation to directory structure
+/// eg. 
+pub fn directory_transform(dir: &Path, transformation: &HashMap<PathBuf, PathBuf>) -> Result<()> {
+    let mut trie: Trie<String, PathBuf> = Trie::new();
+    for (k, v) in transformation.iter() {
+        let path_parts = k.components().map(|part|part.as_os_str().to_string_lossy().to_string());
+        trie.insert(path_parts, v.clone());
+    }
+    let tempdir = tempdir()?;
+    for file in list_files_recursively(dir) {
+        let path_parts = file.components().map(|part|part.as_os_str().to_string_lossy().to_string());
+        if let Some((k, mut v)) = trie.best_match(path_parts) {
+            v.extend(file.components().skip(k.len()).map(|part|part.as_os_str()));
+            println!("{:?} -> {:?}", file, v);
+        }
+        // Find longest match (left to right) in transformation keys of file. 
 
+    }
+
+    Ok(())
+
+}
+
+// patch_path: Directory containing original files
+// diff_path: Diff to be patched into patch_path
+// Destination path
 pub fn patch(patch_path: &Path, diff_path: &Path, dest_path: &Path, silent: bool) -> Result<()> {
-    // patch_path: Directory containing original files
-    // diff_path: Diff to be patched into patch_path
-    // Destination path
     copy_dir_all(patch_path, dest_path, Some(&HashSet::new())).unwrap();
 
     let stdout = match silent {
@@ -413,12 +454,12 @@ pub fn buffer_flatmap<R: std::io::Read, W: std::io::Write>(
 #[cfg(test)]
 mod tests {
     use std::{collections::HashMap, fs::File, io::Read, path::{Path, PathBuf}};
-
     use zip::ZipArchive;
-
     use crate::util::buffer_flatmap;
-
     use super::{file_replace_line, project_root_in_zip, subpath_parent, BufReader, BufWriter, Write};
+    use assert_fs::{self, assert::PathAssert, prelude::{FileTouch, FileWriteStr, PathChild}};
+    use predicates::prelude::*;
+
 
     #[test]
     fn buffer_filter_test() {
@@ -469,14 +510,44 @@ mod tests {
 
     #[test]
     fn test_project_root_in_zip() {
-        let zip_path = Path::new("./testing/test.zip");
+        let zip_path = Path::new("./testing/TestPA1.zip");
         let zip_file = File::open(zip_path).unwrap();
         let mut zip = ZipArchive::new(zip_file).unwrap();
         let mut submission_zipfile_mapping = HashMap::new();
         submission_zipfile_mapping.insert(PathBuf::from("pom.xml"), PathBuf::from("pom.xml"));
         submission_zipfile_mapping.insert(PathBuf::from("src/main/"), PathBuf::from("src/main/"));
+        submission_zipfile_mapping.insert(PathBuf::from("src/test/"), PathBuf::from("src/test/"));
 
         let root = project_root_in_zip(&mut zip, &submission_zipfile_mapping.keys().collect()).unwrap();
         assert!(root == PathBuf::from("TestPA1")); 
+    }
+
+    #[test]
+    fn test_directory_transform() {
+        // Setup testing directory
+        let temp = assert_fs::TempDir::new().unwrap();
+        let etc = PathBuf::from("./etc");
+        let bin = PathBuf::from("./bin");
+        let file_1 = PathBuf::from("1");
+        let file_2 = PathBuf::from("2");
+        let file_3 = PathBuf::from("3");
+
+        temp.child(&etc).child(&file_1).write_str("file1").unwrap();
+        temp.child(&etc).child(&file_2).write_str("file2").unwrap();
+        temp.child(&bin).touch().unwrap();
+
+        let mut transformation = HashMap::new();
+        transformation.insert(etc.clone(), bin.clone());
+        transformation.insert(bin.clone(), etc.clone());
+        transformation.insert(file_2.clone(), file_3.clone());
+        // directory_transform(temp.path(), &transformation);
+
+
+        // temp.child(&bin).child(&file_1).assert(predicate::path::exists());
+        // temp.child(&bin).child(&file_2).assert(predicate::path::missing());
+        // temp.child(&etc).child(&file_1).assert(predicate::path::missing());
+        // temp.child(&etc).child(&file_2).assert(predicate::path::missing());
+        // temp.child(&file_3).assert("file2");
+        temp.close().unwrap();
     }
 }

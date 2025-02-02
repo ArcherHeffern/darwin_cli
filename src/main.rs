@@ -130,6 +130,12 @@ fn main() {
         _ => project_type_to_project(&read_config().unwrap().project_type)
     };
 
+    if let Err(e) = project {
+        eprintln!("{}", e);
+        return;
+    }
+    let project = project.unwrap();
+
     match command {
         SubCommand::ListProjectTypes => {
             commands::list_project_types();
@@ -194,7 +200,7 @@ fn main() {
             commands::download_results_by_classname(&project, test.as_str(), outfile.as_str());
         }
         SubCommand::ViewStudentSubmission { student } => {
-            commands::view_student_submission(student.as_str());
+            commands::view_student_submission(&project, student.as_str());
         }
         SubCommand::CreateReport {
             dest_path,

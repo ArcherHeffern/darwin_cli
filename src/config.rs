@@ -39,18 +39,6 @@ pub fn darwin_root() -> PathBuf {
         darwin_root().join("skel")
     }
 
-        pub fn src_dir() -> PathBuf {
-            skel_dir().join("src")
-        }
-
-            pub fn test_dir() -> PathBuf {
-                src_dir().join("test")
-            }
-
-            pub fn main_dir() -> PathBuf {
-                src_dir().join("main")
-            }
-    
     pub fn diff_exclude_dir() -> PathBuf {
         darwin_root().join("diff_exclude")
     }
