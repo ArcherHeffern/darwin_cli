@@ -10,7 +10,7 @@ use tempfile::tempdir;
 
 use crate::{
     config::{darwin_root, student_diff_file}, darwin_config::{self, read_config}, list_students::list_students, project_runner::Project, types::{StatusMsg, TestResult, TestResultError, TestResults}, util::{
-        flatten_move_recursive, list_files_recursively,
+        flatten_move_recursive, dir_list_absolute_file_paths_recursively,
     }, view_student_results::parse_test_results
 };
 
@@ -322,7 +322,7 @@ fn _create_student_report(
     // project.recreate_original_project(&diff_path, tmpdir.path())?;
     project.recreate_normalized_project(&student_diff_file(student), tmpdir.path())?;
     project.recreate_original_project(tmpdir.path(), false)?;
-    let file_paths = list_files_recursively(tmpdir.path());
+    let file_paths = dir_list_absolute_file_paths_recursively(tmpdir.path());
 
     let mut files = Vec::new();
     file_paths.iter().for_each(|file_path| {
@@ -539,7 +539,7 @@ fn create_static_page_html(project: &Project, dest: &Path, handlebars: &Handleba
     let mut files: Vec<PathBuf> = Vec::new();
     for item in project.diff_exclude.iter() {
         if item.is_dir() {
-            files.append(&mut list_files_recursively(item));
+            files.append(&mut dir_list_absolute_file_paths_recursively(item));
         } else if item.is_file() {
             files.push(item.clone());
         }

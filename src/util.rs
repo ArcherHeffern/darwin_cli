@@ -135,7 +135,7 @@ fn _flatten_move_recursive(
     Ok(())
 }
 
-pub fn list_files_recursively(dir: &Path) -> Vec<PathBuf> {
+pub fn dir_list_absolute_file_paths_recursively(dir: &Path) -> Vec<PathBuf> {
     let mut files = Vec::new();
     if dir.is_dir() {
         match fs::read_dir(dir) {
@@ -145,7 +145,7 @@ pub fn list_files_recursively(dir: &Path) -> Vec<PathBuf> {
                     if path.is_file() {
                         files.push(path);
                     } else if path.is_dir() {
-                        let mut sub_files = list_files_recursively(&path);
+                        let mut sub_files = dir_list_absolute_file_paths_recursively(&path);
                         files.append(&mut sub_files);
                     }
                 }
@@ -268,15 +268,31 @@ pub fn directory_transform(dir: &Path, transformation: &HashMap<PathBuf, PathBuf
         let path_parts = k.components().map(|part|part.as_os_str().to_string_lossy().to_string());
         trie.insert(path_parts, v.clone());
     }
-    let tempdir = tempdir()?;
-    for file in list_files_recursively(dir) {
-        let path_parts = file.components().map(|part|part.as_os_str().to_string_lossy().to_string());
+    let temp_dir = tempdir()?;
+    for file in dir_list_absolute_file_paths_recursively(dir) {
+        let stripped_file = file.strip_prefix(dir).map_err(|_|Error::from(ErrorKind::Other))?;
+        let path_parts = stripped_file.components().map(|part|part.as_os_str().to_string_lossy().to_string());
         if let Some((k, mut v)) = trie.best_match(path_parts) {
-            v.extend(file.components().skip(k.len()).map(|part|part.as_os_str()));
-            println!("{:?} -> {:?}", file, v);
+            v.extend(stripped_file.components().skip(k.len()).map(|part|part.as_os_str()));
+            let dest = temp_dir.path().join(v);
+            if let Some(parent) = dest.parent() {
+                create_dir_all(parent)?;
+            }
+            rename(&file, &dest).map_err(|e|Error::new(ErrorKind::Other, format!("Failed to rename {:?} to {:?}: {}", file, &dest, e)))?;
+        } else {
+            let dest = temp_dir.path().join(stripped_file);
+            if let Some(parent) = dest.parent() {
+                create_dir_all(parent)?;
+            }
+            rename(&file, &dest).map_err(|e|Error::new(ErrorKind::Other, format!("Failed to rename {:?} to {:?}: {}", file, dest, e)))?;
         }
-        // Find longest match (left to right) in transformation keys of file. 
+    }
+    let backup_path = dir.with_extension("bak");
+    rename(dir, &backup_path)?; 
+    rename(&temp_dir, dir)?; 
 
+    if dir.exists() {
+        fs::remove_dir_all(&backup_path)?;
     }
 
     Ok(())
@@ -456,7 +472,7 @@ mod tests {
     use std::{collections::HashMap, fs::File, io::Read, path::{Path, PathBuf}};
     use zip::ZipArchive;
     use crate::util::buffer_flatmap;
-    use super::{file_replace_line, project_root_in_zip, subpath_parent, BufReader, BufWriter, Write};
+    use super::{directory_transform, file_replace_line, project_root_in_zip, subpath_parent, BufReader, BufWriter, Write};
     use assert_fs::{self, assert::PathAssert, prelude::{FileTouch, FileWriteStr, PathChild}};
     use predicates::prelude::*;
 
@@ -526,10 +542,10 @@ mod tests {
     fn test_directory_transform() {
         // Setup testing directory
         let temp = assert_fs::TempDir::new().unwrap();
-        let etc = PathBuf::from("./etc");
-        let bin = PathBuf::from("./bin");
-        let file_1 = PathBuf::from("1");
-        let file_2 = PathBuf::from("2");
+        let etc = PathBuf::from("etc");
+        let bin = PathBuf::from("bin");
+        let file_1 = PathBuf::from("1"); // etc
+        let file_2 = PathBuf::from("2"); // etc
         let file_3 = PathBuf::from("3");
 
         temp.child(&etc).child(&file_1).write_str("file1").unwrap();
@@ -539,15 +555,15 @@ mod tests {
         let mut transformation = HashMap::new();
         transformation.insert(etc.clone(), bin.clone());
         transformation.insert(bin.clone(), etc.clone());
-        transformation.insert(file_2.clone(), file_3.clone());
-        // directory_transform(temp.path(), &transformation);
+        transformation.insert(etc.join(file_2.clone()), file_3.clone());
 
+        directory_transform(temp.path(), &transformation).unwrap();
 
-        // temp.child(&bin).child(&file_1).assert(predicate::path::exists());
-        // temp.child(&bin).child(&file_2).assert(predicate::path::missing());
-        // temp.child(&etc).child(&file_1).assert(predicate::path::missing());
-        // temp.child(&etc).child(&file_2).assert(predicate::path::missing());
-        // temp.child(&file_3).assert("file2");
+        temp.child(&bin).child(&file_1).assert(predicate::path::exists());
+        temp.child(&bin).child(&file_2).assert(predicate::path::missing());
+        temp.child(&etc).child(&file_1).assert(predicate::path::missing());
+        temp.child(&etc).child(&file_2).assert(predicate::path::missing());
+        temp.child(&file_3).assert("file2");
         temp.close().unwrap();
     }
 }

@@ -13,7 +13,7 @@ use xml::EventReader;
 
 use crate::config::skel_dir;
 use crate::types::{StatusMsg, TestResult, TestResultError};
-use crate::util::list_files_recursively;
+use crate::util::dir_list_absolute_file_paths_recursively;
 
 use super::Project;
 
@@ -39,7 +39,7 @@ pub fn compile(_: &Project, project_path: &Path) -> Result<()> {
 pub fn list_tests(_: &Project) -> HashSet<String> {
     let test_dir = skel_dir().join("src").join("test").join("java");
     let test_dir_str = test_dir.to_str().unwrap();
-    let files = list_files_recursively(&test_dir);
+    let files = dir_list_absolute_file_paths_recursively(&test_dir);
 
     let mut out = HashSet::new();
     for file in files {
